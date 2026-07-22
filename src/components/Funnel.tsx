@@ -11,6 +11,7 @@ import {
   type Answers,
   type Step,
 } from "@/lib/form";
+import { trackLead } from "@/lib/pixel";
 import {
   buildWhatsAppUrl,
   isValidPhone,
@@ -384,6 +385,7 @@ function Done({ url }: { url: string }) {
 
       <a
         href={url}
+        onClick={trackLead}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
         Falar com um advogado agora

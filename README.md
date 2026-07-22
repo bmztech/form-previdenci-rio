@@ -108,9 +108,25 @@ A página está com `robots: noindex` (`src/app/layout.tsx`), já que é destino
 anúncio e não deve competir com o site institucional na busca. Remova se quiser
 indexar.
 
-## Meta Pixel / Google Ads
+## Meta Pixel
 
-Ainda não há pixel instalado. Para adicionar, coloque o script em
-`src/app/layout.tsx` usando `next/script` e dispare o evento de conversão dentro
-de `finish()`, em `src/components/Funnel.tsx` — é o ponto exato em que o lead
-completa o funil.
+Pixel `1289395722733398`, instalado em `src/components/MetaPixel.tsx` (código
+base + `noscript`) e montado no `layout.tsx`. Dois eventos:
+
+| Evento     | Quando dispara                                       | Onde                                    |
+| ---------- | ---------------------------------------------------- | --------------------------------------- |
+| `PageView` | Toda carga da página                                 | `MetaPixel.tsx`                         |
+| `Lead`     | Clique em "Falar com um advogado agora", na tela final | `trackLead()` em `src/lib/pixel.ts`     |
+
+O `Lead` marca o lead que terminou o funil **e** foi para o WhatsApp — é o
+evento para otimizar campanha. Ele não dispara em quem é desqualificado no meio
+nem em quem abandona.
+
+Vale saber: o clique navega para o `wa.me` na mesma aba, então a requisição do
+`Lead` corre junto com a saída da página. Na prática o navegador entrega, mas se
+o volume no Gerenciador de Anúncios vier abaixo do esperado, dá para disparar o
+evento quando a tela final aparece (dentro de `finish()`, em `Funnel.tsx`) em
+vez de no clique — mais garantido, porém conta também quem vê a tela e não
+clica.
+
+Para trocar o pixel, edite `META_PIXEL_ID` em `src/lib/pixel.ts`.
