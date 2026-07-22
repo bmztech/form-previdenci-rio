@@ -7,11 +7,9 @@
 /**
  * Número que recebe os leads no WhatsApp.
  * Formato: código do país + DDD + número, apenas dígitos.
- * Ex.: (41) 99954-5084  ->  "5541999545084"
- *
- * TODO: substituir pelo número definitivo do escritório.
+ * Ex.: (42) 6823-5732  ->  "554268235732"
  */
-export const WHATSAPP_NUMBER = "5541999545084";
+export const WHATSAPP_NUMBER = "554268235732";
 
 /** Link do Instagram exibido na tela de desqualificação. */
 export const INSTAGRAM_URL = "https://www.instagram.com/bmzadvogados/";

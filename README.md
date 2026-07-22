@@ -23,8 +23,8 @@ npm run dev
 | Formato da mensagem enviada                     | `src/lib/whatsapp.ts`       |
 | Textos da abertura e da tela de desqualificação | `src/components/Funnel.tsx` |
 
-> **Pendente:** `WHATSAPP_NUMBER` em `src/lib/config.ts` está com o número que
-> vinha do Tally (`5541999545084`). Trocar pelo definitivo antes de subir.
+`WHATSAPP_NUMBER` está como `554268235732` — (42) 6823-5732, conta verificada
+no WhatsApp como "Bmz Advogados".
 
 ## O funil
 
