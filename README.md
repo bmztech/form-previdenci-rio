@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BMZ Advogados — Formulário de qualificação (INSS)
 
-## Getting Started
+Funil condicional que qualifica leads de auxílio-acidente e, no final, abre o
+WhatsApp do escritório com todas as respostas e as UTMs da campanha já
+preenchidas na mensagem.
 
-First, run the development server:
+Next.js 16 (App Router) + Tailwind 4. A página é 100% estática — não há backend,
+banco nem armazenamento de dados.
+
+## Rodando localmente
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## O que mexer
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Preciso mudar…                                  | Arquivo                     |
+| ----------------------------------------------- | --------------------------- |
+| Número do WhatsApp, Instagram, UTMs lidas       | `src/lib/config.ts`         |
+| Perguntas, opções e a lógica condicional        | `src/lib/form.ts`           |
+| Formato da mensagem enviada                     | `src/lib/whatsapp.ts`       |
+| Textos da abertura e da tela de desqualificação | `src/components/Funnel.tsx` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+> **Pendente:** `WHATSAPP_NUMBER` em `src/lib/config.ts` está com o número que
+> vinha do Tally (`5541999545084`). Trocar pelo definitivo antes de subir.
 
-## Learn More
+## O funil
 
-To learn more about Next.js, take a look at the following resources:
+```
+Abertura
+  └─ Nome
+      └─ Sofreu acidente com sequela?
+          ├─ Não ──────────────────────────────────► Desqualificado
+          └─ Sim
+              └─ Situação de trabalho na época?
+                  ├─ Carteira assinada / Agricultor ──────────┐
+                  └─ MEI, Autônomo / Desempregado             │
+                      └─ Carteira assinada no ano anterior?   │
+                          ├─ Não ───────────────────► Desqualificado
+                          └─ Sim ─────────────────────────────┤
+                                                              ▼
+                                                 Buscou o INSS?
+                                                     └─ WhatsApp
+                                                         └─ Parte do corpo
+                                                             └─ ✅ abre o wa.me
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Para mudar qualquer ramificação, edite o campo `next` do step correspondente em
+`src/lib/form.ts` — ele aceita um id fixo ou uma função que decide pela resposta.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Mensagem gerada
 
-## Deploy on Vercel
+```
+Olá! Preenchi o formulário no site.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Nome: Maria Aparecida de Souza
+Sequela: Sim
+Vínculo: Era MEI, Autônomo
+Carteira até 1 ano antes: Sim
+INSS: Fui ao INSS mas fui negado
+WhatsApp: (41) 99987-1234
+Região: Coluna ou pescoço
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+— origem —
+landing_page: https://…
+utm_source: facebook
+utm_medium: cpc
+utm_campaign: inss-acidente
+utm_content: criativo-03
+utm_term: auxilio
+fbclid: IwAR…
+```
+
+Só entram as linhas que existem: perguntas que o lead não viu (por causa da
+condicional) e UTMs ausentes são omitidas.
+
+### Rastreamento
+
+`utm_source`, `utm_medium`, `utm_campaign`, `utm_content`, `utm_term`, `fbclid`
+e `gclid` são lidos da query string na primeira carga e guardados em
+`sessionStorage`, então sobrevivem a um reload no meio do preenchimento.
+`landing_page` e `referrer` são capturados automaticamente.
+
+Para adicionar outro parâmetro, inclua na lista `TRACKING_PARAMS` em
+`src/lib/config.ts`.
+
+## Deploy na Vercel
+
+```bash
+npx vercel --prod
+```
+
+Ou conecte o repositório em vercel.com — o preset do Next.js é detectado
+sozinho, sem variáveis de ambiente para configurar.
+
+A página está com `robots: noindex` (`src/app/layout.tsx`), já que é destino de
+anúncio e não deve competir com o site institucional na busca. Remova se quiser
+indexar.
+
+## Meta Pixel / Google Ads
+
+Ainda não há pixel instalado. Para adicionar, coloque o script em
+`src/app/layout.tsx` usando `next/script` e dispare o evento de conversão dentro
+de `finish()`, em `src/components/Funnel.tsx` — é o ponto exato em que o lead
+completa o funil.
