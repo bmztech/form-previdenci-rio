@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { INSTAGRAM_URL, SITE_URL } from "@/lib/config";
 import {
   FIRST_STEP,
+  questionOf,
   resolveNext,
   stepById,
   type Answers,
@@ -27,7 +28,7 @@ const LETTERS = ["A", "B", "C", "D", "E", "F"];
  */
 function pathTotal(answers: Answers): number {
   const v = answers.vinculo;
-  return v === "mei" || v === "desempregado" ? 7 : 6;
+  return v === "mei" || v === "desempregado" ? 8 : 7;
 }
 
 type Screen = "intro" | "question" | "disqualified" | "done";
@@ -158,7 +159,7 @@ export default function Funnel() {
     return (
       <div key={currentId} className="animate-step-in">
         <h2 className="text-2xl leading-snug font-bold text-navy sm:text-3xl">
-          {step.question}
+          {questionOf(step, answers)}
         </h2>
 
         {step.kind === "choice" ? (
@@ -231,7 +232,17 @@ export default function Funnel() {
         )}
       </div>
     );
-  }, [answer, currentId, draft, error, screen, step, submitInput, whatsAppUrl]);
+  }, [
+    answer,
+    answers,
+    currentId,
+    draft,
+    error,
+    screen,
+    step,
+    submitInput,
+    whatsAppUrl,
+  ]);
 
   return (
     <main className="flex min-h-full flex-1 flex-col items-center justify-center px-4 py-8 sm:py-12">

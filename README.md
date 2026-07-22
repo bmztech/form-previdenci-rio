@@ -44,7 +44,8 @@ Abertura
                                                  Buscou o INSS?
                                                      └─ WhatsApp
                                                          └─ Parte do corpo
-                                                             └─ ✅ abre o wa.me
+                                                             └─ Qual é a lesão
+                                                                 └─ ✅ abre o wa.me
 ```
 
 Para mudar qualquer ramificação, edite o campo `next` do step correspondente em
@@ -53,15 +54,15 @@ Para mudar qualquer ramificação, edite o campo `next` do step correspondente e
 ## Mensagem gerada
 
 ```
-Olá! Preenchi o formulário no site.
+Caso: perdi dois dedos da mão direita na região do braço ou mão
 
-Nome: Maria Aparecida de Souza
+Nome: Carlos Henrique Alves
 Sequela: Sim
 Vínculo: Era MEI, Autônomo
 Carteira até 1 ano antes: Sim
 INSS: Fui ao INSS mas fui negado
 WhatsApp: (41) 99987-1234
-Região: Coluna ou pescoço
+Região: Braço ou mão
 
 — origem —
 landing_page: https://…
@@ -73,8 +74,16 @@ utm_term: auxilio
 fbclid: IwAR…
 ```
 
+A primeira linha resume o caso (`buildHeadline`, em `src/lib/whatsapp.ts`)
+juntando a lesão descrita pelo lead com a região afetada. A região entra na
+frase pelo campo `phrase` da opção, em `src/lib/form.ts` — é ele que faz
+"Braço ou mão" virar "do braço ou mão". Se adicionar uma região nova, preencha
+o `phrase` junto, senão a frase sai com a label em minúsculas.
+
 Só entram as linhas que existem: perguntas que o lead não viu (por causa da
-condicional) e UTMs ausentes são omitidas.
+condicional) e UTMs ausentes são omitidas. A lesão não vira uma linha própria
+porque já aparece por extenso no cabeçalho — é o que faz a flag
+`hideInSummary` no step.
 
 ### Rastreamento
 

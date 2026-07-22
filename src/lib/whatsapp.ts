@@ -1,5 +1,5 @@
 import { TRACKING_PARAMS, WHATSAPP_NUMBER } from "./config";
-import { STEPS, labelFor, type Answers } from "./form";
+import { STEPS, labelFor, phraseFor, type Answers } from "./form";
 
 export type Tracking = Partial<Record<string, string>>;
 
@@ -44,13 +44,25 @@ export function readTracking(): Tracking {
   return tracking;
 }
 
+/**
+ * Primeira linha da mensagem — resume o caso para o advogado bater o olho:
+ * "Caso: fratura que não consolidou na região do braço ou mão".
+ */
+export function buildHeadline(answers: Answers): string {
+  const lesao = answers.lesao?.trim();
+  if (!lesao) return "Caso novo pelo formulário do site.";
+
+  const regiao = phraseFor("regiao", answers);
+  return regiao ? `Caso: ${lesao} na região ${regiao}` : `Caso: ${lesao}`;
+}
+
 /** Monta o texto da mensagem que o lead envia para o escritório. */
 export function buildMessage(answers: Answers, tracking: Tracking): string {
-  const lines: string[] = ["Olá! Preenchi o formulário no site.", ""];
+  const lines: string[] = [buildHeadline(answers), ""];
 
   for (const step of STEPS) {
     const value = answers[step.id];
-    if (!value) continue; // pergunta não exibida neste caminho do funil
+    if (!value || step.hideInSummary) continue; // não exibido neste caminho
     lines.push(`${step.summaryLabel}: ${labelFor(step, value)}`);
   }
 
