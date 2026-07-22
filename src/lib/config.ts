@@ -12,7 +12,7 @@
 export const WHATSAPP_NUMBER = "554268235732";
 
 /** Link do Instagram exibido na tela de desqualificação. */
-export const INSTAGRAM_URL = "https://www.instagram.com/bmzadvogados/";
+export const INSTAGRAM_URL = "https://www.instagram.com/bmz.advogados/";
 
 /** Site institucional (rodapé). */
 export const SITE_URL = "https://bmzadvogados.adv.br/";

@@ -63,12 +63,13 @@ export default function Funnel() {
     }
   }, [screen, currentId, step?.kind]);
 
+  // Sem redirecionamento automático: o lead precisa ler o aviso de que a
+  // mensagem só chega no escritório depois que ele apertar enviar no WhatsApp.
+  // O clique no botão também é um gesto de verdade, o que faz o app abrir
+  // direto no celular em vez de cair no navegador.
   const finish = useCallback((finalAnswers: Answers) => {
-    const url = buildWhatsAppUrl(finalAnswers, tracking.current);
-    setWhatsAppUrl(url);
+    setWhatsAppUrl(buildWhatsAppUrl(finalAnswers, tracking.current));
     setScreen("done");
-    // Redireciona ainda dentro do gesto do usuário, para o app abrir no celular.
-    window.location.href = url;
   }, []);
 
   const goTo = useCallback(
@@ -368,24 +369,25 @@ function Done({ url }: { url: string }) {
       </div>
 
       <h2 className="mt-5 text-2xl font-bold text-navy sm:text-3xl">
-        Tudo certo! Abrindo seu WhatsApp…
+        Falta só um passo!
       </h2>
 
-      <p className="mt-4 text-base leading-relaxed text-ink">
-        Sua conversa com a nossa equipe já vai abrir com todos os dados
-        preenchidos. É só apertar enviar.
-      </p>
+      <div className="mt-6 rounded-xl border-2 border-gold bg-gold/20 px-5 py-5">
+        <p className="text-lg leading-snug font-extrabold text-navy uppercase sm:text-xl">
+          Envie a mensagem pronta na próxima tela do WhatsApp
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-ink">
+          Ela já vai estar escrita com os seus dados — é só apertar enviar.{" "}
+          <strong>Sem esse envio, a nossa equipe não recebe o seu caso.</strong>
+        </p>
+      </div>
 
       <a
         href={url}
-        className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark"
+        className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
         Falar com um advogado agora
       </a>
-
-      <p className="mt-4 text-sm text-muted">
-        Não abriu automaticamente? Toque no botão acima.
-      </p>
     </div>
   );
 }
