@@ -11,6 +11,16 @@
  */
 export const WHATSAPP_NUMBER = "554268235732";
 
+/**
+ * Números por unidade, usados nas rotas /aux-a, /aux-b e /aux-c — cada uma
+ * envia o lead para um número diferente.
+ */
+export const WHATSAPP_NUMBERS = {
+  a: "554268235838", // BMZ A
+  b: "554268235732", // BMZ B
+  c: "554268235828", // BMZ C
+} as const;
+
 /** Link do Instagram exibido na tela de desqualificação. */
 export const INSTAGRAM_URL = "https://www.instagram.com/bmz.advogados/";
 

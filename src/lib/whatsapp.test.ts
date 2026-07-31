@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { TRACKING_PARAMS } from "./config";
+import { TRACKING_PARAMS, WHATSAPP_NUMBER, WHATSAPP_NUMBERS } from "./config";
 import type { Answers } from "./form";
-import { buildMessage, readTracking } from "./whatsapp";
+import { buildMessage, buildWhatsAppUrl, readTracking } from "./whatsapp";
 
 function setUrl(url: string) {
   window.history.pushState({}, "", url);
@@ -156,5 +156,33 @@ describe("buildMessage — bloco de origem com UTMs", () => {
 
     expect(message).toContain("utm_source: google");
     expect(message).not.toContain("utm_medium:");
+  });
+});
+
+describe("buildWhatsAppUrl — número de destino por unidade", () => {
+  const answers: Answers = {};
+
+  it("usa o WHATSAPP_NUMBER padrão quando nenhum número é informado", () => {
+    const url = buildWhatsAppUrl(answers, {});
+    expect(url).toBe(
+      `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(buildMessage(answers, {}))}`,
+    );
+  });
+
+  it("usa o número informado para cada unidade (aux-a/b/c)", () => {
+    expect(buildWhatsAppUrl(answers, {}, WHATSAPP_NUMBERS.a)).toContain(
+      `https://wa.me/${WHATSAPP_NUMBERS.a}?`,
+    );
+    expect(buildWhatsAppUrl(answers, {}, WHATSAPP_NUMBERS.b)).toContain(
+      `https://wa.me/${WHATSAPP_NUMBERS.b}?`,
+    );
+    expect(buildWhatsAppUrl(answers, {}, WHATSAPP_NUMBERS.c)).toContain(
+      `https://wa.me/${WHATSAPP_NUMBERS.c}?`,
+    );
+  });
+
+  it("os três números das unidades são distintos", () => {
+    const values = Object.values(WHATSAPP_NUMBERS);
+    expect(new Set(values).size).toBe(values.length);
   });
 });
