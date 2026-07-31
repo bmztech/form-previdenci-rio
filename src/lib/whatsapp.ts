@@ -78,9 +78,13 @@ export function buildMessage(answers: Answers, tracking: Tracking): string {
 }
 
 /** Link wa.me pronto para abrir a conversa já com a mensagem preenchida. */
-export function buildWhatsAppUrl(answers: Answers, tracking: Tracking): string {
+export function buildWhatsAppUrl(
+  answers: Answers,
+  tracking: Tracking,
+  whatsappNumber: string = WHATSAPP_NUMBER,
+): string {
   const text = encodeURIComponent(buildMessage(answers, tracking));
-  return `https://wa.me/${WHATSAPP_NUMBER}?text=${text}`;
+  return `https://wa.me/${whatsappNumber}?text=${text}`;
 }
 
 /** Máscara de telefone brasileiro: (41) 99954-5084 */

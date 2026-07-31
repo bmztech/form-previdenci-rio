@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { INSTAGRAM_URL, SITE_URL } from "@/lib/config";
+import { INSTAGRAM_URL, SITE_URL, WHATSAPP_NUMBERS } from "@/lib/config";
 import {
   FIRST_STEP,
   questionOf,
@@ -34,7 +34,22 @@ function pathTotal(answers: Answers): number {
 
 type Screen = "intro" | "question" | "disqualified" | "done";
 
-export default function Funnel() {
+/** Sorteia uma das três unidades quando nenhuma é fixada pela rota. */
+function randomWhatsAppNumber(): string {
+  const numbers = Object.values(WHATSAPP_NUMBERS);
+  return numbers[Math.floor(Math.random() * numbers.length)];
+}
+
+export default function Funnel({
+  whatsappNumber,
+}: {
+  /** Se omitido (rota "/"), sorteia entre as unidades A/B/C. */
+  whatsappNumber?: string;
+}) {
+  // Sorteado uma única vez, na montagem, e mantido até o fim do funil.
+  const [resolvedNumber] = useState(
+    () => whatsappNumber ?? randomWhatsAppNumber(),
+  );
   const [screen, setScreen] = useState<Screen>("intro");
   const [currentId, setCurrentId] = useState<string>(FIRST_STEP);
   const [history, setHistory] = useState<string[]>([]);
@@ -68,10 +83,15 @@ export default function Funnel() {
   // mensagem só chega no escritório depois que ele apertar enviar no WhatsApp.
   // O clique no botão também é um gesto de verdade, o que faz o app abrir
   // direto no celular em vez de cair no navegador.
-  const finish = useCallback((finalAnswers: Answers) => {
-    setWhatsAppUrl(buildWhatsAppUrl(finalAnswers, tracking.current));
-    setScreen("done");
-  }, []);
+  const finish = useCallback(
+    (finalAnswers: Answers) => {
+      setWhatsAppUrl(
+        buildWhatsAppUrl(finalAnswers, tracking.current, resolvedNumber),
+      );
+      setScreen("done");
+    },
+    [resolvedNumber],
+  );
 
   const goTo = useCallback(
     (nextId: string, fromId: string, nextAnswers: Answers) => {
