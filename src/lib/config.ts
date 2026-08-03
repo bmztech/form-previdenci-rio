@@ -16,7 +16,7 @@ export const WHATSAPP_NUMBER = "554268235732";
  * envia o lead para um número diferente.
  */
 export const WHATSAPP_NUMBERS = {
-  a: "554268235838", // BMZ A
+  a: "5542968250703", // BMZ A
   b: "554268235732", // BMZ B
   c: "554268235828", // BMZ C
 } as const;
