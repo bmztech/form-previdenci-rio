@@ -12,6 +12,7 @@ import {
   type Step,
 } from "@/lib/form";
 import { trackLead } from "@/lib/pixel";
+import { markSubmitted, useHasSubmitted } from "@/lib/submission-status";
 import {
   buildWhatsAppUrl,
   isValidPhone,
@@ -21,6 +22,10 @@ import {
 } from "@/lib/whatsapp";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+/** Grupo do funil pra fins de "já enviou antes?" — aux-a/b/c e "/" contam
+ * como o mesmo formulário, independente do adicional de 25%. */
+const FORM_GROUP = "aux-acidente";
 
 /**
  * Total exato de perguntas do caminho que o lead está percorrendo.
@@ -65,6 +70,11 @@ export default function Funnel({
   useEffect(() => {
     tracking.current = readTracking();
   }, []);
+
+  // Se esse navegador já enviou o auxílio-acidente antes (por qualquer uma
+  // das unidades), a tela de agradecimento substitui a intro — ver o uso
+  // de `alreadySubmitted` no `body` abaixo.
+  const alreadySubmitted = useHasSubmitted(FORM_GROUP);
 
   const step = stepById(currentId) as Step;
   const total = pathTotal(answers);
@@ -174,6 +184,10 @@ export default function Funnel({
   const canGoBack = screen === "question" || screen === "disqualified";
 
   const body = useMemo(() => {
+    // Se já enviou antes e ainda está na intro (não é o clique que acabou
+    // de marcar `alreadySubmitted` ao final DESTE funil), mostra a tela de
+    // agradecimento em vez de reabrir o questionário.
+    if (screen === "intro" && alreadySubmitted) return <AlreadySubmitted />;
     if (screen === "intro") return <Intro onStart={() => setScreen("question")} />;
     if (screen === "disqualified") return <Disqualified />;
     if (screen === "done") return <Done url={whatsAppUrl} />;
@@ -255,6 +269,7 @@ export default function Funnel({
       </div>
     );
   }, [
+    alreadySubmitted,
     answer,
     answers,
     currentId,
@@ -320,22 +335,24 @@ function Intro({ onStart }: { onStart: () => void }) {
   return (
     <div className="animate-step-in text-center">
       <p className="text-xs font-bold tracking-[0.18em] text-green uppercase">
-        Avaliação gratuita
+        Informação previdenciária
       </p>
 
       <h1 className="mt-3 text-3xl leading-tight font-bold text-navy sm:text-4xl">
-        Você pode ter direito a receber um benefício do INSS!
+        Você pode ter direito a receber um benefício do INSS
       </h1>
 
       <p className="mt-5 text-base leading-relaxed text-ink">
-        Somos a <strong>BMZ Advogados</strong>, especializados em benefícios
-        previdenciários. Já ajudamos milhares de pessoas a receberem o que é
-        delas por direito.
+        Se você sofreu um acidente, trabalhava de carteira assinada na época e
+        ficou com alguma limitação que reduziu sua capacidade de trabalho,
+        sua situação pode se enquadrar nos critérios do{" "}
+        <strong>Auxílio-Acidente</strong>.
       </p>
 
       <p className="mt-3 text-base leading-relaxed text-ink">
-        Se você sofreu um acidente e ficou com alguma sequela, a lei pode
-        garantir uma <strong>renda extra pra você todos os meses</strong>.
+        Somos a <strong>BMZ Advogados Associados</strong>, atuamos com Direito
+        Previdenciário e atendemos online em todo o Brasil. Tire suas dúvidas
+        e entenda os critérios aplicáveis ao seu caso.
       </p>
 
       <button
@@ -347,7 +364,7 @@ function Intro({ onStart }: { onStart: () => void }) {
       </button>
 
       <p className="mt-4 text-sm text-muted">
-        Perguntas rápidas · leva menos de 1 minuto · 100% gratuito
+        Perguntas rápidas · leva menos de 1 minuto
       </p>
     </div>
   );
@@ -405,10 +422,43 @@ function Done({ url }: { url: string }) {
 
       <a
         href={url}
-        onClick={trackLead}
+        onClick={() => {
+          trackLead();
+          markSubmitted(FORM_GROUP);
+        }}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
         Falar com um advogado agora
+      </a>
+    </div>
+  );
+}
+
+/** Exibida quando esse navegador já enviou o formulário antes (por
+ * qualquer unidade) — evita fazer o lead repetir o funil inteiro. */
+function AlreadySubmitted() {
+  return (
+    <div className="animate-step-in text-center">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-green/10 text-2xl">
+        🙏
+      </div>
+
+      <h2 className="mt-5 text-2xl font-bold text-navy sm:text-3xl">
+        Agradecemos o seu contato!
+      </h2>
+
+      <p className="mt-4 text-base leading-relaxed text-ink">
+        Já recebemos as suas informações. Em breve, alguém da nossa equipe
+        vai te chamar no WhatsApp para dar continuidade ao seu caso.
+      </p>
+
+      <a
+        href={INSTAGRAM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-7 py-3.5 text-base font-bold text-white transition-colors hover:bg-navy-soft"
+      >
+        Acompanhe nosso conteúdo no Instagram
       </a>
     </div>
   );
