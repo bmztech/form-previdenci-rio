@@ -9,7 +9,7 @@
 
 /**
  * Número que recebe os leads deste formulário no WhatsApp.
- * TODO: ainda não definido — substituir antes de publicar a rota /adic-25.
  * Formato: código do país + DDD + número, apenas dígitos.
+ * Ex.: (42) 6825-0715  ->  "554268250715"
  */
-export const WHATSAPP_NUMBER_ADIC25 = "SEU_NUMERO_AQUI";
+export const WHATSAPP_NUMBER_ADIC25 = "554268250715";
