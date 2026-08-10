@@ -13,9 +13,6 @@
  *                                 -> [Sim] -> P3 (motivo) -> WhatsApp
  * Depois que o lead confirma uma resposta que desqualifica, o botão
  * "Voltar" some — não dá pra reabrir o funil a partir da desqualificação.
- *
- * TODO: tela Intro abaixo ainda tem texto placeholder — substituir pelo
- * copy real de abertura do funil "adic-25" (o roteiro em si já é o real).
  */
 
 import Image from "next/image";
@@ -32,6 +29,7 @@ import {
   type Step,
 } from "@/lib/form-adic25";
 import { trackLead } from "@/lib/pixel";
+import { markSubmitted, useHasSubmitted } from "@/lib/submission-status";
 import {
   buildWhatsAppUrl,
   isValidPhone,
@@ -41,6 +39,9 @@ import {
 } from "@/lib/whatsapp-adic25";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+/** Grupo independente do "aux-acidente" — ver src/lib/submission-status.ts. */
+const FORM_GROUP = "adic25";
 
 type Screen = "intro" | "question" | "disqualified" | "done";
 
@@ -67,6 +68,10 @@ export default function FunnelAdic25({
   useEffect(() => {
     tracking.current = readTracking();
   }, []);
+
+  // Se esse navegador já enviou o adic-25 antes, a tela de agradecimento
+  // substitui a intro — independente do grupo "aux-acidente".
+  const alreadySubmitted = useHasSubmitted(FORM_GROUP);
 
   const step = stepById(currentId) as Step;
   // TODO: se o funil real ganhar ramificação que muda o total de perguntas
@@ -178,6 +183,7 @@ export default function FunnelAdic25({
   const canGoBack = screen === "question";
 
   const body = useMemo(() => {
+    if (screen === "intro" && alreadySubmitted) return <AlreadySubmitted />;
     if (screen === "intro") return <Intro onStart={() => setScreen("question")} />;
     if (screen === "disqualified") return <Disqualified answers={answers} />;
     if (screen === "done") return <Done url={whatsAppUrl} />;
@@ -278,6 +284,7 @@ export default function FunnelAdic25({
       </div>
     );
   }, [
+    alreadySubmitted,
     answer,
     answers,
     currentId,
@@ -344,23 +351,22 @@ function Intro({ onStart }: { onStart: () => void }) {
   return (
     <div className="animate-step-in text-center">
       <p className="text-xs font-bold tracking-[0.18em] text-green uppercase">
-        Avaliação gratuita
+        Atenção, aposentados por invalidez do INSS
       </p>
 
       <h1 className="mt-3 text-3xl leading-tight font-bold text-navy sm:text-4xl">
-        Você pode ter direito ao adicional de 25% do INSS!
+        Você pode ter direito ao adicional de 25%!
       </h1>
 
       <p className="mt-5 text-base leading-relaxed text-ink">
-        Somos a <strong>BMZ Advogados</strong>, especializados em benefícios
-        previdenciários. Já ajudamos milhares de pessoas a receberem o que é
-        delas por direito.
+        Se você recebe aposentadoria por invalidez e precisa da ajuda
+        permanente de outra pessoa nas atividades do dia a dia, sua situação
+        pode se enquadrar nos critérios para receber o adicional de 25%.
       </p>
 
       <p className="mt-3 text-base leading-relaxed text-ink">
-        Se você é aposentado por invalidez e precisa da ajuda permanente de
-        outra pessoa para as atividades do dia a dia, a lei pode garantir um{" "}
-        <strong>acréscimo de 25% sobre o valor da sua aposentadoria</strong>.
+        Somos a <strong>BMZ Advogados Associados</strong>, atuamos com Direito
+        Previdenciário e atendemos online em todo o Brasil.
       </p>
 
       <button
@@ -368,11 +374,11 @@ function Intro({ onStart }: { onStart: () => void }) {
         onClick={onStart}
         className="mt-8 w-full rounded-xl bg-green px-8 py-4 text-center text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
-        Descobrir se tenho direito <span aria-hidden>→</span>
+        Entender se posso ter direito <span aria-hidden>→</span>
       </button>
 
       <p className="mt-4 text-sm text-muted">
-        Perguntas rápidas · leva menos de 1 minuto · 100% gratuito
+        Perguntas rápidas · leva menos de 1 minuto
       </p>
     </div>
   );
@@ -436,10 +442,43 @@ function Done({ url }: { url: string }) {
 
       <a
         href={url}
-        onClick={trackLead}
+        onClick={() => {
+          trackLead();
+          markSubmitted(FORM_GROUP);
+        }}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
         Falar com um advogado agora
+      </a>
+    </div>
+  );
+}
+
+/** Exibida quando esse navegador já enviou o adic-25 antes — evita fazer o
+ * lead repetir o funil inteiro. */
+function AlreadySubmitted() {
+  return (
+    <div className="animate-step-in text-center">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-green/10 text-2xl">
+        🙏
+      </div>
+
+      <h2 className="mt-5 text-2xl font-bold text-navy sm:text-3xl">
+        Agradecemos o seu contato!
+      </h2>
+
+      <p className="mt-4 text-base leading-relaxed text-ink">
+        Já recebemos as suas informações. Em breve, alguém da nossa equipe
+        vai te chamar no WhatsApp para dar continuidade ao seu caso.
+      </p>
+
+      <a
+        href={INSTAGRAM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-7 py-3.5 text-base font-bold text-white transition-colors hover:bg-navy-soft"
+      >
+        Acompanhe nosso conteúdo no Instagram
       </a>
     </div>
   );
