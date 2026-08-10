@@ -13,9 +13,6 @@
  *                                 -> [Sim] -> P3 (motivo) -> WhatsApp
  * Depois que o lead confirma uma resposta que desqualifica, o botão
  * "Voltar" some — não dá pra reabrir o funil a partir da desqualificação.
- *
- * TODO: tela Intro abaixo ainda tem texto placeholder — substituir pelo
- * copy real de abertura do funil "adic-25" (o roteiro em si já é o real).
  */
 
 import Image from "next/image";
@@ -354,23 +351,22 @@ function Intro({ onStart }: { onStart: () => void }) {
   return (
     <div className="animate-step-in text-center">
       <p className="text-xs font-bold tracking-[0.18em] text-green uppercase">
-        Avaliação gratuita
+        Atenção, aposentados por invalidez do INSS
       </p>
 
       <h1 className="mt-3 text-3xl leading-tight font-bold text-navy sm:text-4xl">
-        Você pode ter direito ao adicional de 25% do INSS!
+        Você pode ter direito ao adicional de 25%!
       </h1>
 
       <p className="mt-5 text-base leading-relaxed text-ink">
-        Somos a <strong>BMZ Advogados</strong>, especializados em benefícios
-        previdenciários. Já ajudamos milhares de pessoas a receberem o que é
-        delas por direito.
+        Se você recebe aposentadoria por invalidez e precisa da ajuda
+        permanente de outra pessoa nas atividades do dia a dia, sua situação
+        pode se enquadrar nos critérios para receber o adicional de 25%.
       </p>
 
       <p className="mt-3 text-base leading-relaxed text-ink">
-        Se você é aposentado por invalidez e precisa da ajuda permanente de
-        outra pessoa para as atividades do dia a dia, a lei pode garantir um{" "}
-        <strong>acréscimo de 25% sobre o valor da sua aposentadoria</strong>.
+        Somos a <strong>BMZ Advogados Associados</strong>, atuamos com Direito
+        Previdenciário e atendemos online em todo o Brasil.
       </p>
 
       <button
@@ -378,7 +374,7 @@ function Intro({ onStart }: { onStart: () => void }) {
         onClick={onStart}
         className="mt-8 w-full rounded-xl bg-green px-8 py-4 text-center text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
-        Descobrir se tenho direito <span aria-hidden>→</span>
+        Entender se posso ter direito <span aria-hidden>→</span>
       </button>
 
       <p className="mt-4 text-sm text-muted">
