@@ -32,6 +32,7 @@ import {
   type Step,
 } from "@/lib/form-adic25";
 import { trackLead } from "@/lib/pixel";
+import { markSubmitted, useHasSubmitted } from "@/lib/submission-status";
 import {
   buildWhatsAppUrl,
   isValidPhone,
@@ -41,6 +42,9 @@ import {
 } from "@/lib/whatsapp-adic25";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
+
+/** Grupo independente do "aux-acidente" — ver src/lib/submission-status.ts. */
+const FORM_GROUP = "adic25";
 
 type Screen = "intro" | "question" | "disqualified" | "done";
 
@@ -67,6 +71,10 @@ export default function FunnelAdic25({
   useEffect(() => {
     tracking.current = readTracking();
   }, []);
+
+  // Se esse navegador já enviou o adic-25 antes, a tela de agradecimento
+  // substitui a intro — independente do grupo "aux-acidente".
+  const alreadySubmitted = useHasSubmitted(FORM_GROUP);
 
   const step = stepById(currentId) as Step;
   // TODO: se o funil real ganhar ramificação que muda o total de perguntas
@@ -178,6 +186,7 @@ export default function FunnelAdic25({
   const canGoBack = screen === "question";
 
   const body = useMemo(() => {
+    if (screen === "intro" && alreadySubmitted) return <AlreadySubmitted />;
     if (screen === "intro") return <Intro onStart={() => setScreen("question")} />;
     if (screen === "disqualified") return <Disqualified answers={answers} />;
     if (screen === "done") return <Done url={whatsAppUrl} />;
@@ -278,6 +287,7 @@ export default function FunnelAdic25({
       </div>
     );
   }, [
+    alreadySubmitted,
     answer,
     answers,
     currentId,
@@ -436,10 +446,43 @@ function Done({ url }: { url: string }) {
 
       <a
         href={url}
-        onClick={trackLead}
+        onClick={() => {
+          trackLead();
+          markSubmitted(FORM_GROUP);
+        }}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
         Falar com um advogado agora
+      </a>
+    </div>
+  );
+}
+
+/** Exibida quando esse navegador já enviou o adic-25 antes — evita fazer o
+ * lead repetir o funil inteiro. */
+function AlreadySubmitted() {
+  return (
+    <div className="animate-step-in text-center">
+      <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-green/10 text-2xl">
+        🙏
+      </div>
+
+      <h2 className="mt-5 text-2xl font-bold text-navy sm:text-3xl">
+        Agradecemos o seu contato!
+      </h2>
+
+      <p className="mt-4 text-base leading-relaxed text-ink">
+        Já recebemos as suas informações. Em breve, alguém da nossa equipe
+        vai te chamar no WhatsApp para dar continuidade ao seu caso.
+      </p>
+
+      <a
+        href={INSTAGRAM_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-navy px-7 py-3.5 text-base font-bold text-white transition-colors hover:bg-navy-soft"
+      >
+        Acompanhe nosso conteúdo no Instagram
       </a>
     </div>
   );
