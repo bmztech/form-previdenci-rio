@@ -378,7 +378,7 @@ function Intro({ onStart }: { onStart: () => void }) {
       </button>
 
       <p className="mt-4 text-sm text-muted">
-        Perguntas rápidas · leva menos de 1 minuto · 100% gratuito
+        Perguntas rápidas · leva menos de 1 minuto
       </p>
     </div>
   );
