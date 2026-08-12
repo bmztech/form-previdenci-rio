@@ -68,10 +68,10 @@ export const STEPS: Step[] = [
     kind: "choice",
     summaryLabel: "Sequela",
     question:
-      "Você sofreu um acidente que deixou alguma sequela ou limitação física?",
+      "1.	Você sofreu um acidente e ficou com alguma sequela ou limitação PERMANENTE que dificulta seu trabalho?",
     options: [
-      { value: "sim", label: "Sim" },
-      { value: "nao", label: "Não" },
+      { value: "sim", label: "Sim, hoje tenho dificuldade para trabalhar como antes " },
+      { value: "nao", label: ") Não sofri acidente/ Me recuperei e trabalho normalmente " },
     ],
     next: (v) => (v === "sim" ? "vinculo" : "disqualified"),
   },
@@ -132,9 +132,9 @@ export const STEPS: Step[] = [
       { value: "braco", label: "Braço ou mão", phrase: "do braço ou mão" },
       { value: "perna", label: "Perna ou pé", phrase: "da perna ou pé" },
       {
-        value: "coluna",
-        label: "Coluna ou pescoço",
-        phrase: "da coluna ou pescoço",
+        value: "Ombro ou Clavícula",
+        label: "Ombro ou Clavícula",
+        phrase: "da Ombro ou Clavícula",
       },
       {
         value: "cabeca",
