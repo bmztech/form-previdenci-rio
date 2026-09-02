@@ -83,7 +83,7 @@ export const STEPS: Step[] = [
     options: [
       { value: "carteira", label: "Tinha carteira assinada" },
       { value: "agricultor", label: "Era Agricultor" },
-      { value: "mei", label: "Era MEI, Autônomo" },
+      { value: "mei", label: "Era MEI ou Autônomo" },
       { value: "desempregado", label: "Estava desempregado" },
     ],
     // Carteira assinada e agricultor já têm qualidade de segurado -> pula direto
