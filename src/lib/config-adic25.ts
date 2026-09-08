@@ -10,6 +10,6 @@
 /**
  * Número que recebe os leads deste formulário no WhatsApp.
  * Formato: código do país + DDD + número, apenas dígitos.
- * Ex.: (42) 96825-0737  ->  "5542968250737"
+ * Ex.: (42) 96825-0716  ->  "5542968250716"
  */
-export const WHATSAPP_NUMBER_ADIC25 = "5542968250737";
+export const WHATSAPP_NUMBER_ADIC25 = "5542968250716";
