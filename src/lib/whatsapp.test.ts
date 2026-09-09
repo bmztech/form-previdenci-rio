@@ -181,8 +181,13 @@ describe("buildWhatsAppUrl — número de destino por unidade", () => {
     );
   });
 
-  it("os três números das unidades são distintos", () => {
+  // Provisoriamente o Time A compartilha o número do Time C, por isso não
+  // exigimos números distintos — apenas que cada unidade tenha um número válido.
+  it("todas as unidades têm um número de WhatsApp válido", () => {
     const values = Object.values(WHATSAPP_NUMBERS);
-    expect(new Set(values).size).toBe(values.length);
+    expect(values).toHaveLength(3);
+    for (const number of values) {
+      expect(number).toMatch(/^55\d{10,11}$/);
+    }
   });
 });
