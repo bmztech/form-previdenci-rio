@@ -94,10 +94,10 @@ export const STEPS: Step[] = [
     options: [
       { value: "invalidez", label: "Aposentadoria por invalidez" },
       { value: "bpc_loas", label: "BPC/LOAS" },
-      { value: "outros", label: "Outros" },
+      { value: "Aposentadoria_Normal", label: "Aposentadoria Normal" },
     ],
-    // Invalidez segue direto pra pergunta 02. BPC/LOAS e Outros passam por
-    // uma confirmação antes de desqualificar.
+    // Invalidez segue direto pra pergunta 02. BPC/LOAS e Aposentadoria Normal
+    // passam por uma confirmação antes de desqualificar.
     next: (v) => (v === "invalidez" ? "decimo13" : "confirmaBeneficio"),
   },
   {

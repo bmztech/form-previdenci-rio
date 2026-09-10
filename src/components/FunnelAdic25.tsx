@@ -7,7 +7,7 @@
  *
  * Roteiro de qualificação (nome/telefone já vêm antes, como nos outros
  * formulários):
- *   aviso -> P1 (benefício) -> [BPC/Outros: confirma -> desqualificado]
+ *   aviso -> P1 (benefício) -> [BPC/Apos. Normal: confirma -> desqualificado]
  *                            -> [invalidez] -> P2 (13º)
  *                                 -> [Não: confirma -> desqualificado]
  *                                 -> [Sim] -> P3 (motivo) -> WhatsApp
