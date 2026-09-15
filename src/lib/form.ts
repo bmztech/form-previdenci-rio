@@ -70,8 +70,14 @@ export const STEPS: Step[] = [
     question:
       "1.	Você sofreu um acidente e ficou com alguma sequela ou limitação PERMANENTE que dificulta seu trabalho?",
     options: [
-      { value: "sim", label: "Sim, hoje tenho dificuldade para trabalhar como antes " },
-      { value: "nao", label: ") Não sofri acidente/ Me recuperei e trabalho normalmente " },
+      {
+        value: "sim",
+        label: "Sim, hoje tenho dificuldade para trabalhar como antes ",
+      },
+      {
+        value: "nao",
+        label: "Não sofri acidente/ Me recuperei e trabalho normalmente ",
+      },
     ],
     next: (v) => (v === "sim" ? "vinculo" : "disqualified"),
   },
@@ -94,14 +100,14 @@ export const STEPS: Step[] = [
   {
     id: "carteiraAnterior",
     kind: "choice",
-    summaryLabel: "Carteira até 1 ano antes",
+    summaryLabel: "Mais de 1 ano sem carteira assinada",
     question:
-      "Até um ano antes do acidente, você trabalhou com carteira assinada por algum período?",
+      "Fazia mais de um ano que estava sem carteira assinada, quando ocorreu seu acidente?",
     options: [
       { value: "sim", label: "Sim" },
       { value: "nao", label: "Não" },
     ],
-    next: (v) => (v === "sim" ? "inss" : "disqualified"),
+    next: (v) => (v === "sim" ? "disqualified" : "inss"),
   },
   {
     id: "inss",
