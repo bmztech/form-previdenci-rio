@@ -21,7 +21,7 @@ import {
   type Tracking,
 } from "@/lib/whatsapp";
 
-const LETTERS = ["A", "B", "C", "D", "E", "F"];
+const LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
 /** Grupo do funil pra fins de "já enviou antes?" — aux-a/b/c e "/" contam
  * como o mesmo formulário, independente do adicional de 25%. */

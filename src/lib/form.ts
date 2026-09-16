@@ -54,6 +54,9 @@ export type Step = Base &
 
 export const FIRST_STEP = "nome";
 
+/** Regiões que, na triagem do escritório, não configuram auxílio-acidente. */
+const REGIOES_DESQUALIFICANTES = new Set(["cabeca", "costas"]);
+
 export const STEPS: Step[] = [
   {
     id: "nome",
@@ -142,15 +145,14 @@ export const STEPS: Step[] = [
         label: "Ombro ou Clavícula",
         phrase: "da Ombro ou Clavícula",
       },
-      {
-        value: "cabeca",
-        label: "Cabeça ou visão",
-        phrase: "da cabeça ou visão",
-      },
-      // "Outra região" não nomeia nada, então a frase vira só "afetada".
-      { value: "outra", label: "Outra região", phrase: "afetada" },
+      { value: "visao", label: "Visão", phrase: "da visão" },
+      { value: "cabeca", label: "Cabeça", phrase: "da cabeça" },
+      { value: "costas", label: "Costas", phrase: "das costas" },
+      // "Outras regiões" não nomeia nada, então a frase vira só "afetada".
+      { value: "outra", label: "Outras regiões", phrase: "afetada" },
     ],
-    next: "lesao",
+    // Cabeça e costas não se enquadram na triagem do escritório.
+    next: (v) => (REGIOES_DESQUALIFICANTES.has(v) ? "disqualified" : "lesao"),
   },
   {
     id: "lesao",
