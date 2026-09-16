@@ -197,8 +197,10 @@ Abertura
                                                  Buscou o INSS?
                                                      └─ WhatsApp
                                                          └─ Parte do corpo
-                                                             └─ Qual é a lesão
-                                                                 └─ ✅ abre o wa.me
+                                                             ├─ Cabeça / Costas ──► Desqualificado
+                                                             └─ demais
+                                                                 └─ Qual é a lesão
+                                                                     └─ ✅ abre o wa.me
 ```
 
 Só o step `vinculo` muda o tamanho do caminho (7 ou 8 perguntas) — por isso
