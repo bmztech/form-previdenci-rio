@@ -17,7 +17,7 @@ export const WHATSAPP_NUMBER = "554268235732";
  */
 export const WHATSAPP_NUMBERS = {
   a: "554268235828", // BMZ A
-  b: "554268235732", // BMZ B
+  b: "554268235828", // BMZ B
   c: "554268235828", // BMZ C
 } as const;
 
