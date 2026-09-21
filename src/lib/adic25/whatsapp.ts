@@ -1,14 +1,12 @@
 /**
  * Montagem da mensagem/link de WhatsApp do funil "adic-25".
  * `maskPhone`, `isValidPhone` e `readTracking` não dependem de STEPS —
- * são 100% genéricos, por isso são reaproveitados direto de `./whatsapp`
- * (import, sem alterar o arquivo original).
+ * são 100% genéricos, por isso vivem em `@/lib/tracking` (import direto,
+ * sem duplicar).
  */
-import { WHATSAPP_NUMBER_ADIC25 } from "./config-adic25";
-import { STEPS, labelFor, type Answers } from "./form-adic25";
-import { isValidPhone, maskPhone, readTracking, type Tracking } from "./whatsapp";
-
-export { isValidPhone, maskPhone, readTracking, type Tracking };
+import { WHATSAPP_NUMBER_ADIC25 } from "./config";
+import { STEPS, labelFor, type Answers } from "./form";
+import type { Tracking } from "../tracking/utm";
 
 /**
  * Primeira linha da mensagem — resume o caso para quem for atender.

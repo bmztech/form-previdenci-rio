@@ -3,8 +3,8 @@
  * CONFIGURAÇÃO — formulário "adic-25" (isolado do formulário original).
  * ---------------------------------------------------------------------------
  * Instagram, site institucional e UTMs seguem os mesmos de sempre — import
- * direto de "@/lib/config" onde forem necessários. Aqui só o que é
- * específico deste formulário.
+ * direto de "@/lib/site/config" e "@/lib/tracking/utm" onde forem
+ * necessários. Aqui só o que é específico deste formulário.
  */
 
 /**

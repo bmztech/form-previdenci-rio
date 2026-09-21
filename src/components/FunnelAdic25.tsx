@@ -17,8 +17,7 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { INSTAGRAM_URL, SITE_URL } from "@/lib/config";
-import { WHATSAPP_NUMBER_ADIC25 } from "@/lib/config-adic25";
+import { WHATSAPP_NUMBER_ADIC25 } from "@/lib/adic25/config";
 import {
   FIRST_STEP,
   questionOf,
@@ -27,20 +26,17 @@ import {
   TOTAL_QUESTIONS,
   type Answers,
   type Step,
-} from "@/lib/form-adic25";
-import { trackLead } from "@/lib/pixel";
-import { markSubmitted, useHasSubmitted } from "@/lib/submission-status";
-import {
-  buildWhatsAppUrl,
-  isValidPhone,
-  maskPhone,
-  readTracking,
-  type Tracking,
-} from "@/lib/whatsapp-adic25";
+} from "@/lib/adic25/form";
+import { buildWhatsAppUrl } from "@/lib/adic25/whatsapp";
+import { trackLead } from "@/lib/meta/pixel";
+import { INSTAGRAM_URL, SITE_URL } from "@/lib/site/config";
+import { markSubmitted, useHasSubmitted } from "@/lib/submission/status";
+import { isValidPhone, maskPhone } from "@/lib/tracking/phone";
+import { readTracking, type Tracking } from "@/lib/tracking/utm";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
-/** Grupo independente do "aux-acidente" — ver src/lib/submission-status.ts. */
+/** Grupo independente do "aux-acidente" — ver src/lib/submission/status.ts. */
 const FORM_GROUP = "adic25";
 
 type Screen = "intro" | "question" | "disqualified" | "done";

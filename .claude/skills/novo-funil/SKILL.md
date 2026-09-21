@@ -1,19 +1,20 @@
 ---
 name: novo-funil
-description: Cria um novo formulário/funil de qualificação de leads seguindo o padrão do repo (form-*.ts, config-*.ts, whatsapp-*.ts, componente Funnel*.tsx, rota). Use quando o usuário pedir para criar um novo formulário, funil, landing de qualificação ou duplicar o adic-25/aux-acidente para outra oferta.
+description: Cria um novo formulário/funil de qualificação de leads seguindo o padrão do repo (pasta src/lib/<slug>/ com form.ts, config.ts, whatsapp.ts, componente Funnel*.tsx, rota). Use quando o usuário pedir para criar um novo formulário, funil, landing de qualificação ou duplicar o adic-25/aux-acidente para outra oferta.
 ---
 
 # Criar um novo funil
 
 Este repo cresce por **cópia guiada**, não por generalização. Cada
-formulário é isolado (não importa nem depende de outro, exceto o que é
-genuinamente compartilhado). Não tente criar um "componente de funil
+formulário tem pasta própria em `src/lib/` (não importa nem depende de outro
+funil, exceto o que é genuinamente compartilhado — pastas `meta/`, `site/`,
+`tracking/`, `submission/`). Não tente criar um "componente de funil
 genérico parametrizável" — já foi avaliado e descartado; ver `README.md`
 ("Como adicionar um novo formulário/funil") para o racional completo. Este
 skill executa exatamente esse playbook.
 
-Use `src/components/FunnelAdic25.tsx` + `src/lib/form-adic25.ts` +
-`src/lib/config-adic25.ts` + `src/lib/whatsapp-adic25.ts` como referência de
+Use `src/components/FunnelAdic25.tsx` + `src/lib/adic25/form.ts` +
+`src/lib/adic25/config.ts` + `src/lib/adic25/whatsapp.ts` como referência de
 cópia — é o exemplo mais completo (tem `kind: "info"`, telas de confirmação,
 mensagem de desqualificação variável).
 
@@ -21,8 +22,9 @@ mensagem de desqualificação variável).
 
 Se o usuário não tiver dado tudo isso, pergunte antes de criar arquivos:
 
-- **Slug do funil** (ex.: `adic-25` → usado em nomes de arquivo/rota:
-  `form-<slug>.ts`, `/<slug>`). Prefira algo curto, kebab-case.
+- **Slug do funil** (ex.: `adic25` → usado no nome da pasta/rota:
+  `src/lib/<slug>/`, `/<slug>`). Prefira algo curto, kebab-case (ou sem
+  hífen, se for virar um único identificador, como `adic25`).
 - **Nome em PascalCase** para o componente (ex.: `adic25` → `Adic25`,
   `revisao-vida-toda` → `RevisaoVidaToda`).
 - **Perguntas e ramificação**: qual a sequência de perguntas, quais opções
@@ -31,7 +33,7 @@ Se o usuário não tiver dado tudo isso, pergunte antes de criar arquivos:
   conteúdo de `STEPS`.
 - **Número de WhatsApp de destino** (só dígitos, código do país + DDD).
 - **Textos de tela**: headline da intro, texto de desqualificação, se muda
-  conforme o motivo (como o `adic-25` faz com `disqualifyMessage`).
+  conforme o motivo (como o `adic25` faz com `disqualifyMessage`).
 - **Grupo de "já enviado"**: por padrão, todo funil novo ganha um `FormGroup`
   próprio (não reaproveita `"aux-acidente"` nem `"adic25"`). Só compartilhe
   um grupo existente se for genuinamente "a mesma oferta, outra origem de
@@ -42,14 +44,18 @@ Se o usuário não tiver dado tudo isso, pergunte antes de criar arquivos:
 Não invente perguntas de negócio (critérios de qualificação, textos
 jurídicos) — isso tem que vir do usuário.
 
-## 2. Criar `src/lib/form-<slug>.ts`
+## 2. Criar a pasta `src/lib/<slug>/`
 
-Copie a estrutura de `src/lib/form-adic25.ts` (tem o tipo `Step` mais
+Cada funil vive isolado na própria pasta — nunca solto direto em `src/lib/`.
+
+## 3. Criar `src/lib/<slug>/form.ts`
+
+Copie a estrutura de `src/lib/adic25/form.ts` (tem o tipo `Step` mais
 completo, com `kind: "info"`). Se o funil não precisar de telas
-informativas, pode copiar de `src/lib/form.ts` em vez disso.
+informativas, pode copiar de `src/lib/aux-acidente/form.ts` em vez disso.
 
 Reescreva o array `STEPS` com as perguntas do passo 1. Regras do formato
-(ver README, seção "`src/lib/form*.ts`"):
+(ver README, seção "`src/lib/<funil>/form.ts`"):
 
 - `next` como string → vai sempre pra esse id; `next` como função
   `(value) => id` → ramifica pela resposta.
@@ -66,7 +72,7 @@ Mantenha as mesmas funções utilitárias exportadas (`stepById`, `resolveNext`,
 `labelFor`, `phraseFor`, `questionOf`, `TOTAL_QUESTIONS`, e `answerLabel` se
 houver telas de confirmação) — o componente depende desse contrato.
 
-## 3. Criar `src/lib/config-<slug>.ts`
+## 4. Criar `src/lib/<slug>/config.ts`
 
 Só o que for específico deste funil — tipicamente:
 
@@ -74,30 +80,34 @@ Só o que for específico deste funil — tipicamente:
 export const WHATSAPP_NUMBER_<SLUG> = "55...";
 ```
 
-`INSTAGRAM_URL`, `SITE_URL` e `TRACKING_PARAMS` vêm direto de
-`src/lib/config.ts` — não duplique.
+`INSTAGRAM_URL`/`SITE_URL` vêm direto de `src/lib/site/config.ts` e
+`TRACKING_PARAMS` de `src/lib/tracking/utm.ts` — não duplique.
 
-## 4. Criar `src/lib/whatsapp-<slug>.ts`
+## 5. Criar `src/lib/<slug>/whatsapp.ts`
 
-Copie `src/lib/whatsapp-adic25.ts`. Reexporte o que é genérico do arquivo
-original em vez de duplicar:
+Copie `src/lib/adic25/whatsapp.ts`. Importe o que é genérico das pastas
+compartilhadas em vez de duplicar:
 
 ```ts
-export { isValidPhone, maskPhone, readTracking, type Tracking } from "./whatsapp";
+import { isValidPhone, maskPhone } from "@/lib/tracking/phone";
+import { readTracking, type Tracking } from "@/lib/tracking/utm";
 ```
 
 Reescreva só `buildHeadline` (resumo do caso na primeira linha da mensagem)
 e o `whatsappNumber` default de `buildWhatsAppUrl` (aponta pro
-`WHATSAPP_NUMBER_<SLUG>` do passo 3). `buildMessage` normalmente não precisa
+`WHATSAPP_NUMBER_<SLUG>` do passo 4). `buildMessage` normalmente não precisa
 mudar — já itera `STEPS` genericamente.
 
-## 5. Criar `src/components/Funnel<Nome>.tsx`
+## 6. Criar `src/components/Funnel<Nome>.tsx`
 
 Copie `src/components/FunnelAdic25.tsx` inteiro. Ajuste:
 
-- Imports para os arquivos dos passos 2–4.
+- Imports para os arquivos dos passos 3–5 (`@/lib/<slug>/form`,
+  `@/lib/<slug>/config`, `@/lib/<slug>/whatsapp`), mais os compartilhados
+  (`@/lib/site/config`, `@/lib/meta/pixel`, `@/lib/submission/status`,
+  `@/lib/tracking/phone`, `@/lib/tracking/utm`).
 - `FORM_GROUP` — string nova. Adicione esse literal em `FormGroup` (union
-  type) em `src/lib/submission-status.ts`.
+  type) em `src/lib/submission/status.ts`.
 - Se nenhuma ramificação do funil mudar o número de perguntas do caminho,
   mantenha `total = TOTAL_QUESTIONS`. Se mudar (como o step `vinculo` do
   funil original), troque por uma função `pathTotal(answers)` — ver
@@ -108,7 +118,7 @@ Copie `src/components/FunnelAdic25.tsx` inteiro. Ajuste:
   (`useState`, `goTo`, `answer`, `submitInput`, `goBack`, atalhos de
   teclado) — isso é o motor genérico, só copie como está.
 
-## 6. Criar a rota `src/app/<slug>/page.tsx`
+## 7. Criar a rota `src/app/<slug>/page.tsx`
 
 ```tsx
 import Funnel<Nome> from "@/components/Funnel<Nome>";
@@ -124,7 +134,7 @@ nessa página — ela tem prioridade sobre `layout.tsx` raiz (ver
 `src/app/adic-25/page.tsx`). Padrão do repo é `robots: { index: false, follow: false }`
 em toda rota de formulário (destino de anúncio).
 
-## 7. Verificar
+## 8. Verificar
 
 - `npm run lint` e `npx tsc --noEmit` (ou `npm run build`) para pegar erros
   de tipo/import.
@@ -132,7 +142,8 @@ em toda rota de formulário (destino de anúncio).
   pra conferir o texto da mensagem de WhatsApp gerada com um caminho de
   exemplo.
 - Se a lógica de `buildHeadline`/`buildMessage` tiver algo não trivial, copie
-  a estrutura de `src/lib/whatsapp.test.ts` pra um `whatsapp-<slug>.test.ts`.
+  a estrutura de `src/lib/aux-acidente/whatsapp.test.ts` pra um
+  `src/lib/<slug>/whatsapp.test.ts`.
 - Depois de criar tudo, adicione uma linha na tabela "Formulários existentes"
   e na tabela "O que mexer" do `README.md` para o funil novo — o README é a
   fonte de verdade da arquitetura, não deixe ele ficar desatualizado.

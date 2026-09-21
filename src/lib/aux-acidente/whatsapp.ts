@@ -1,0 +1,65 @@
+import { WHATSAPP_NUMBER } from "./config";
+import { STEPS, labelFor, phraseFor, type Answers } from "./form";
+import type { Tracking } from "../tracking/utm";
+
+/**
+ * Primeira linha da mensagem — resume o caso para o advogado bater o olho:
+ * "Caso: fratura que não consolidou na região do braço ou mão".
+ */
+export function buildHeadline(answers: Answers): string {
+  const lesao = answers.lesao?.trim();
+  if (!lesao) return "Caso novo pelo formulário do site.";
+
+  const regiao = phraseFor("regiao", answers);
+  return regiao ? `Caso: ${lesao} na região ${regiao}` : `Caso: ${lesao}`;
+}
+
+/**
+ * Monta o texto da mensagem que o lead envia para o escritório.
+ *
+ * `unit` só vem preenchido na rota raiz "/" (rodízio A/B/C sem link fixo) —
+ * é o que permite o escritório saber de qual time é o lead, já que hoje os
+ * três números de WHATSAPP_NUMBERS ainda são iguais. Nas rotas fixas
+ * (aux-a/b/c) a unidade já está implícita no link usado, então `unit` fica
+ * de fora e a mensagem sai como sempre saiu.
+ */
+export function buildMessage(
+  answers: Answers,
+  tracking: Tracking,
+  unit?: string,
+): string {
+  const lines: string[] = [];
+  if (unit) lines.push(`[TIME ${unit.toUpperCase()}]`);
+  lines.push(buildHeadline(answers), "");
+
+  for (const step of STEPS) {
+    const value = answers[step.id];
+    if (!value || step.hideInSummary) continue; // não exibido neste caminho
+    lines.push(`${step.summaryLabel}: ${labelFor(step, value)}`);
+  }
+
+  const trackingEntries = Object.entries(tracking).filter(([, v]) => v);
+  const originEntries = unit
+    ? [["unidade", unit.toUpperCase()] as [string, string], ...trackingEntries]
+    : trackingEntries;
+
+  if (originEntries.length > 0) {
+    lines.push("", "— origem —");
+    for (const [key, value] of originEntries) {
+      lines.push(`${key}: ${value}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/** Link wa.me pronto para abrir a conversa já com a mensagem preenchida. */
+export function buildWhatsAppUrl(
+  answers: Answers,
+  tracking: Tracking,
+  whatsappNumber: string = WHATSAPP_NUMBER,
+  unit?: string,
+): string {
+  const text = encodeURIComponent(buildMessage(answers, tracking, unit));
+  return `https://wa.me/${whatsappNumber}?text=${text}`;
+}

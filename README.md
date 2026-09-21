@@ -4,10 +4,12 @@ Funis condicionais (tipo "typeform") que qualificam leads jurídicos e, no
 final, abrem o WhatsApp do escritório com todas as respostas e as UTMs da
 campanha já preenchidas na mensagem.
 
-Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript. Cada página é
-100% estática/client-side — não há backend, banco nem armazenamento de dados
-em servidor. Tudo o que existe é `sessionStorage`/`localStorage` no navegador
-do lead (UTMs da sessão e "já enviei esse formulário antes").
+Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript. Quase toda
+página é estática/client-side — não há backend nem banco. Tudo o que existe
+é `sessionStorage`/`localStorage` no navegador do lead (UTMs da sessão e "já
+enviei esse formulário antes") e, na rota raiz "/", um contador em memória
+no servidor só para o rodízio A/B/C (`src/lib/aux-acidente/rotation.ts`) —
+ver "Rodízio de unidades na rota raiz" abaixo.
 
 > **Antes de mexer no código**: este repo está em uma versão do Next.js mais
 > recente que a que você conhece. Convenções e APIs podem divergir do seu
@@ -33,29 +35,63 @@ npm run test:watch
 ## Arquitetura em uma frase
 
 **Um "motor de funil" genérico (`Funnel.tsx` / `FunnelAdic25.tsx`) executa uma
-máquina de estados definida declarativamente em `src/lib/form*.ts`, e ao final
-monta uma URL `wa.me` com a mensagem pronta (`src/lib/whatsapp*.ts`).**
+máquina de estados definida declarativamente em `form.ts`, e ao final monta
+uma URL `wa.me` com a mensagem pronta (`whatsapp.ts`).**
 
-Cada formulário é um conjunto isolado de 3 arquivos + 1 componente + 1 ou mais
-rotas. Não há import cruzado entre formulários — cada um é uma cópia
-independente do padrão, exceto pelo que é genuinamente compartilhado (veja
-"O que é compartilhado" abaixo). Isso é proposital: a ideia é poder
+`src/lib/` é organizado **por domínio**, não em um monte flat de arquivos:
+uma pasta por funil (`aux-acidente/`, `adic25/`) e uma pasta por processo
+transversal genuinamente compartilhado (`meta/`, `site/`, `tracking/`,
+`submission/`) — veja "O que é compartilhado" abaixo. Dentro da pasta de um
+funil não há import cruzado com a pasta de outro funil — cada uma é uma
+cópia independente do padrão. Isso é proposital: a ideia é poder
 mexer/quebrar um formulário sem risco de afetar outro.
+
+```
+src/lib/
+  aux-acidente/   form.ts, config.ts, whatsapp.ts, rotation.ts, *.test.ts
+  adic25/         form.ts, config.ts, whatsapp.ts
+  meta/           pixel.ts
+  site/           config.ts        (INSTAGRAM_URL, SITE_URL)
+  tracking/       utm.ts, phone.ts (UTMs/referrer, máscara/validação de telefone)
+  submission/     status.ts        ("já enviei esse formulário antes")
+```
 
 ### Formulários existentes
 
 | Formulário           | Rota(s)                      | Steps                | Config                    | Mensagem WhatsApp        | Componente             |
 | --------------------- | ----------------------------- | --------------------- | -------------------------- | -------------------------- | ------------------------ |
-| Auxílio-acidente (original) | `/`, `/aux-a`, `/aux-b`, `/aux-c` | `src/lib/form.ts`      | `src/lib/config.ts`        | `src/lib/whatsapp.ts`      | `src/components/Funnel.tsx` |
-| Adicional de 25%      | `/adic-25`                    | `src/lib/form-adic25.ts` | `src/lib/config-adic25.ts` | `src/lib/whatsapp-adic25.ts` | `src/components/FunnelAdic25.tsx` |
+| Auxílio-acidente (original) | `/`, `/aux-a`, `/aux-b`, `/aux-c` | `src/lib/aux-acidente/form.ts` | `src/lib/aux-acidente/config.ts` | `src/lib/aux-acidente/whatsapp.ts` | `src/components/Funnel.tsx` |
+| Adicional de 25%      | `/adic-25`                    | `src/lib/adic25/form.ts` | `src/lib/adic25/config.ts` | `src/lib/adic25/whatsapp.ts` | `src/components/FunnelAdic25.tsx` |
 
 `/`, `/aux-a`, `/aux-b` e `/aux-c` são o **mesmo** funil (`Funnel.tsx` +
-`form.ts`), só mudando o número de WhatsApp de destino:
+`aux-acidente/form.ts`), só mudando o número de WhatsApp de destino:
 
-- `/` sorteia aleatoriamente entre as 3 unidades (`WHATSAPP_NUMBERS` em
-  `config.ts`) — usado quando o anúncio não aponta pra uma unidade fixa.
+- `/` distribui **sequencialmente** entre as 3 unidades por ordem de
+  chegada — 1º lead → A, 2º → B, 3º → C, 4º → A... (`src/lib/aux-acidente/rotation.ts`,
+  ver "Rodízio de unidades na rota raiz" abaixo). Usado quando o anúncio não
+  aponta pra uma unidade fixa (ex.: link do Instagram).
 - `/aux-a`, `/aux-b`, `/aux-c` fixam a unidade via prop `whatsappNumber`
   passada pela `page.tsx` da rota (ver `src/app/aux-a/page.tsx`).
+
+### Rodízio de unidades na rota raiz
+
+A rota `/` é `force-dynamic`: cada acesso roda no servidor e pega a próxima
+unidade de uma fila (`nextUnit()` em `src/lib/aux-acidente/rotation.ts`), num
+contador em memória que persiste enquanto o processo Node estiver de pé. Como
+a mensagem final não diferencia o número por si só (as três unidades ainda
+compartilham número — ver abaixo), a mensagem do WhatsApp vem etiquetada com
+a unidade sorteada: `[TIME A]` no topo e `unidade: A` no bloco "— origem —"
+(`buildMessage` em `src/lib/aux-acidente/whatsapp.ts`). As rotas fixas
+`/aux-a|b|c` **não** etiquetam — a unidade já está implícita no link usado.
+
+Efeitos colaterais aceitos: o contador reinicia a cada deploy/restart do
+processo (volta pro A); e ele só funciona corretamente com **um único
+processo Node** servindo a rota — se um dia isso virar múltiplas instâncias
+(Vercel serverless, réplicas), o rodízio precisa migrar pra um store externo
+(Redis/Upstash), porque cada instância teria seu próprio contador. Por
+depender de estado do processo, `rotation.ts` mora dentro de
+`aux-acidente/` — não é um utilitário genérico, é específico desse funil
+(só a rota raiz o usa).
 
 `/adic-25` é um formulário **completamente diferente** (outra pergunta,
 outra qualificação, outro número de WhatsApp fixo), que só reaproveita peças
@@ -63,18 +99,24 @@ genéricas do formulário original — não os steps nem a lógica de negócio.
 
 ### O que é compartilhado entre formulários
 
-| Arquivo                          | Por quê é compartilhado                                                  |
+Cada peça genuinamente compartilhada tem pasta própria em `src/lib/`, nomeada
+pelo processo/organização que ela representa — não existe uma pasta genérica
+`shared/` catch-all:
+
+| Pasta/arquivo                          | Por quê é compartilhada                                                  |
 | --------------------------------- | -------------------------------------------------------------------------- |
-| `src/lib/config.ts`               | `INSTAGRAM_URL`, `SITE_URL`, `TRACKING_PARAMS` — mesmos em todo o site. `adic-25` importa direto daqui. |
-| `src/lib/whatsapp.ts` → `maskPhone`, `isValidPhone`, `readTracking` | Puramente genéricas, não dependem de `STEPS`. `whatsapp-adic25.ts` faz `import { ... } from "./whatsapp"` em vez de duplicar. |
-| `src/lib/pixel.ts`                 | Meta Pixel é um só, por site.                                             |
-| `src/lib/submission-status.ts`     | Genérico, mas cada formulário usa um `FormGroup` diferente (ver abaixo) — o *código* é compartilhado, o *estado* não. |
+| `src/lib/site/config.ts`               | `INSTAGRAM_URL`, `SITE_URL` — mesmos em todo o site. `adic25` importa direto daqui. |
+| `src/lib/tracking/utm.ts`              | `TRACKING_PARAMS`, `Tracking`, `readTracking()` — captura de UTM/referrer, não depende de `STEPS` de nenhum funil. |
+| `src/lib/tracking/phone.ts`            | `maskPhone`, `isValidPhone` — máscara/validação de telefone, também genéricas. |
+| `src/lib/meta/pixel.ts`                 | Meta Pixel é um só, por site.                                             |
+| `src/lib/submission/status.ts`     | Genérico, mas cada formulário usa um `FormGroup` diferente (ver abaixo) — o *código* é compartilhado, o *estado* não. |
 | `src/components/MetaPixel.tsx`     | Montado uma vez em `layout.tsx`, cobre todas as rotas.                    |
 | `src/app/layout.tsx`, `globals.css` | Casca visual (fonte, cores, `<html>/<body>`) comum a todas as rotas.      |
 
 Tudo o resto (`STEPS`, `buildMessage`, `buildHeadline`, textos das telas,
 número de WhatsApp de destino) é **duplicado de propósito** por formulário —
-editar um não deve exigir entender ou tocar no outro.
+vive dentro da pasta do próprio funil (`aux-acidente/` ou `adic25/`) e editar
+um não deve exigir entender ou tocar no outro.
 
 ---
 
@@ -130,7 +172,7 @@ que grava `markSubmitted`, e é essa marca que faz a próxima visita (ou o
 reload da `intro`) cair em `AlreadySubmitted` em vez de `Intro`.
 
 Isso vale por **grupo** de formulário, não por rota — ver
-`src/lib/submission-status.ts` abaixo para o detalhe de quais rotas
+`src/lib/submission/status.ts` abaixo para o detalhe de quais rotas
 compartilham o mesmo grupo.
 
 Os textos de cada tela ficam nos componentes `Done`/`AlreadySubmitted` no
@@ -142,7 +184,7 @@ funil original.
 
 ---
 
-## `src/lib/form*.ts` — definição declarativa do funil
+## `src/lib/<funil>/form.ts` — definição declarativa do funil
 
 Isso é o que você edita para mudar perguntas, opções ou ramificação. **Não
 mexe em componente para isso.**
@@ -151,7 +193,7 @@ mexe em componente para isso.**
 export type Step = Base & (
   | { id, kind: "text" | "phone", question, placeholder, next: string }
   | { id, kind: "choice", question, options: Choice[], next: string | ((value: string) => string) }
-  | { id, kind: "info", message, buttonLabel?, next: string }  // só em form-adic25.ts
+  | { id, kind: "info", message, buttonLabel?, next: string }  // só em adic25/form.ts
 );
 ```
 
@@ -179,7 +221,7 @@ Funções utilitárias exportadas (mesmo contrato nos dois arquivos de steps):
 `stepById`, `resolveNext`, `labelFor`, `phraseFor`, `questionOf`,
 `TOTAL_QUESTIONS`.
 
-### O funil "auxílio-acidente" (`form.ts`)
+### O funil "auxílio-acidente" (`aux-acidente/form.ts`)
 
 ```
 Abertura
@@ -208,7 +250,7 @@ Só o step `vinculo` muda o tamanho do caminho (7 ou 8 perguntas) — por isso
 em vez de usar uma constante fixa. Se você adicionar outra ramificação que
 mude o número de perguntas do caminho, atualize essa função.
 
-### O funil "adicional de 25%" (`form-adic25.ts`)
+### O funil "adicional de 25%" (`adic25/form.ts`)
 
 ```
 Nome → WhatsApp → [aviso informativo]
@@ -241,12 +283,12 @@ a barra de progresso usa a constante `TOTAL_QUESTIONS` direto (ver comentário
 
 ---
 
-## `src/lib/whatsapp*.ts` — mensagem e link do WhatsApp
+## `src/lib/<funil>/whatsapp.ts` — mensagem e link do WhatsApp
 
 - **`buildHeadline(answers)`** — primeira linha da mensagem, resume o caso
   pro advogado bater o olho antes de ler o resto (ex.: *"Caso: fratura que
   não consolidou na região do braço ou mão"*). Lógica específica por
-  formulário — cada `whatsapp-*.ts` tem a sua.
+  formulário — cada `<funil>/whatsapp.ts` tem a sua.
 - **`buildMessage(answers, tracking)`** — percorre `STEPS` na ordem e escreve
   uma linha `Label: valor` para cada resposta existente. **Só entram as
   perguntas que o lead realmente viu** (ramos não percorridos não têm
@@ -254,13 +296,15 @@ a barra de progresso usa a constante `TOTAL_QUESTIONS` direto (ver comentário
   UTMs, adiciona o bloco `— origem —`.
 - **`buildWhatsAppUrl(answers, tracking, whatsappNumber?)`** — `encodeURIComponent`
   na mensagem e monta `https://wa.me/<numero>?text=<mensagem>`.
-- **`maskPhone` / `isValidPhone`** — máscara `(41) 99954-5084` e validação de
-  10 ou 11 dígitos. Genéricas, vêm de `whatsapp.ts` mesmo no funil `adic-25`.
-- **`readTracking()`** — lê `TRACKING_PARAMS` (`utm_*`, `fbclid`, `gclid`) da
-  query string, mescla com o que já estava salvo em `sessionStorage`
-  (chave `bmz_tracking`) e persiste de novo. `referrer` e `landing_page` são
-  capturados automaticamente, só na primeira visita da sessão. Isso é o que
-  faz as UTMs sobreviverem a um reload no meio do funil.
+- **`maskPhone` / `isValidPhone`** (`src/lib/tracking/phone.ts`) — máscara
+  `(41) 99954-5084` e validação de 10 ou 11 dígitos. Genéricas, os
+  componentes de funil importam direto de lá.
+- **`readTracking()`** (`src/lib/tracking/utm.ts`) — lê `TRACKING_PARAMS`
+  (`utm_*`, `fbclid`, `gclid`) da query string, mescla com o que já estava
+  salvo em `sessionStorage` (chave `bmz_tracking`) e persiste de novo.
+  `referrer` e `landing_page` são capturados automaticamente, só na primeira
+  visita da sessão. Isso é o que faz as UTMs sobreviverem a um reload no
+  meio do funil.
 
 ### Exemplo de mensagem gerada (funil original)
 
@@ -287,7 +331,7 @@ fbclid: IwAR…
 
 ---
 
-## `src/lib/submission-status.ts` — "já enviei esse formulário antes"
+## `src/lib/submission/status.ts` — "já enviei esse formulário antes"
 
 Marca no `localStorage` do navegador (`bmz_submitted_<group>`) que o lead já
 concluiu um **grupo** de formulário, pra não fazer ele repetir tudo se cair
@@ -317,19 +361,19 @@ sincroniza com o valor real do `localStorage`).
 
 Lidos da query string na primeira carga (`readTracking`, ver acima) e
 guardados em `sessionStorage`. Para adicionar outro parâmetro, inclua na
-lista `TRACKING_PARAMS` em `src/lib/config.ts` — vale para todos os
+lista `TRACKING_PARAMS` em `src/lib/tracking/utm.ts` — vale para todos os
 formulários, já que é compartilhado.
 
 ## Meta Pixel
 
-Pixel `1289395722733398` (`META_PIXEL_ID` em `src/lib/pixel.ts`), instalado
-em `src/components/MetaPixel.tsx` (código base + `noscript`) e montado uma
-única vez em `layout.tsx` — cobre todas as rotas/formulários.
+Pixel `1289395722733398` (`META_PIXEL_ID` em `src/lib/meta/pixel.ts`),
+instalado em `src/components/MetaPixel.tsx` (código base + `noscript`) e
+montado uma única vez em `layout.tsx` — cobre todas as rotas/formulários.
 
 | Evento     | Quando dispara                              | Onde                                             |
 | ---------- | -------------------------------------------- | -------------------------------------------------- |
 | `PageView` | Toda carga de página                         | `MetaPixel.tsx`                                    |
-| `Lead`     | Clique em "Falar com um advogado agora" na tela final | `trackLead()` (`pixel.ts`), chamado no `onClick` de `Done` em cada componente de funil |
+| `Lead`     | Clique em "Falar com um advogado agora" na tela final | `trackLead()` (`meta/pixel.ts`), chamado no `onClick` de `Done` em cada componente de funil |
 
 O `Lead` marca quem terminou o funil **e** foi para o WhatsApp — é o evento
 para otimizar campanha. Não dispara em quem é desqualificado nem em quem
@@ -346,30 +390,33 @@ de no clique — mais garantido, porém conta também quem vê a tela e não cli
 ## Como adicionar um novo formulário/funil
 
 Este repo cresce por **cópia guiada**, não por generalização — cada
-formulário novo é isolado dos outros. Use `adic-25` como referência. Passos:
+formulário novo é isolado dos outros, numa pasta própria em `src/lib/`. Use
+`adic25/` como referência. Passos:
 
-1. **Steps**: crie `src/lib/form-<nome>.ts` copiando `form-adic25.ts` (ou
-   `form.ts`, se não precisar de telas `kind: "info"`). Reescreva o array
-   `STEPS` com as perguntas, opções e ramificação (`next`) do novo funil.
-2. **Config**: crie `src/lib/config-<nome>.ts` só com o que for específico
+1. **Pasta**: crie `src/lib/<nome>/`.
+2. **Steps**: crie `src/lib/<nome>/form.ts` copiando `adic25/form.ts` (ou
+   `aux-acidente/form.ts`, se não precisar de telas `kind: "info"`).
+   Reescreva o array `STEPS` com as perguntas, opções e ramificação (`next`)
+   do novo funil.
+3. **Config**: crie `src/lib/<nome>/config.ts` só com o que for específico
    (tipicamente o número de WhatsApp de destino). Reaproveite
-   `INSTAGRAM_URL`, `SITE_URL` e `TRACKING_PARAMS` de `src/lib/config.ts`
-   direto.
-3. **Mensagem**: crie `src/lib/whatsapp-<nome>.ts` copiando
-   `whatsapp-adic25.ts`. Reescreva só `buildHeadline` (o resumo do caso).
-   Reexporte `maskPhone`, `isValidPhone`, `readTracking` de `./whatsapp` sem
-   duplicar.
-4. **Componente**: crie `src/components/Funnel<Nome>.tsx` copiando
-   `FunnelAdic25.tsx`. Troque os imports para os arquivos do passo 1–3,
-   ajuste `FORM_GROUP` (novo grupo em `submission-status.ts` — adicione o
+   `INSTAGRAM_URL`/`SITE_URL` de `src/lib/site/config.ts` e `TRACKING_PARAMS`
+   de `src/lib/tracking/utm.ts` direto.
+4. **Mensagem**: crie `src/lib/<nome>/whatsapp.ts` copiando
+   `adic25/whatsapp.ts`. Reescreva só `buildHeadline` (o resumo do caso).
+   Importe `maskPhone`/`isValidPhone` de `src/lib/tracking/phone.ts` e
+   `readTracking`/`Tracking` de `src/lib/tracking/utm.ts` — não duplique.
+5. **Componente**: crie `src/components/Funnel<Nome>.tsx` copiando
+   `FunnelAdic25.tsx`. Troque os imports para os arquivos dos passos 2–4,
+   ajuste `FORM_GROUP` (novo grupo em `submission/status.ts` — adicione o
    literal em `FormGroup`) e reescreva os textos das telas (`Intro`,
    `Disqualified`, `Done`, `AlreadySubmitted`).
-5. **Rota**: crie `src/app/<nome>/page.tsx` renderizando o componente do
-   passo 4. Se precisar de metadata específica (título/descrição/robots),
+6. **Rota**: crie `src/app/<nome>/page.tsx` renderizando o componente do
+   passo 5. Se precisar de metadata específica (título/descrição/robots),
    sobrescreva `export const metadata` nessa página — ela tem prioridade
    sobre o `layout.tsx` raiz (ver `src/app/adic-25/page.tsx` como exemplo).
-6. **Teste** (opcional, mas o padrão do repo): se a lógica de mensagem tiver
-   algo não trivial, copie a estrutura de `src/lib/whatsapp.test.ts`.
+7. **Teste** (opcional, mas o padrão do repo): se a lógica de mensagem tiver
+   algo não trivial, copie a estrutura de `src/lib/aux-acidente/whatsapp.test.ts`.
 
 Não tente extrair um "componente de funil genérico parametrizável" — já foi
 avaliado implicitamente pelo padrão do repo (dois funis, zero abstração
@@ -383,10 +430,10 @@ crescer muito e as coincidências entre eles pararem de ser coincidência.
 
 | Rota         | Componente                              | Observação                                                             |
 | ------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
-| `/`           | `Funnel` (sem `whatsappNumber`)             | Sorteia unidade A/B/C aleatoriamente a cada sessão.                        |
-| `/aux-a`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.a}` | Fixo na unidade A.                                                          |
-| `/aux-b`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.b}` | Fixo na unidade B.                                                          |
-| `/aux-c`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.c}` | Fixo na unidade C.                                                          |
+| `/`           | `Funnel whatsappNumber={...} unit={...}`   | `page.tsx` roda no servidor (`force-dynamic`) e chama `nextUnit()` — rodízio sequencial A/B/C, mensagem etiquetada. Ver "Rodízio de unidades na rota raiz". |
+| `/aux-a`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.a}` | Fixo na unidade A, sem etiqueta.                                            |
+| `/aux-b`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.b}` | Fixo na unidade B, sem etiqueta.                                            |
+| `/aux-c`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.c}` | Fixo na unidade C, sem etiqueta.                                            |
 | `/adic-25`    | `FunnelAdic25`                              | Metadata própria (`export const metadata` na `page.tsx`), `robots: noindex`. |
 
 `layout.tsx` (raiz) define o `<html>/<body>`, monta `MetaPixel` (todas as
@@ -399,17 +446,20 @@ de anúncio, não deve competir com o site institucional na busca).
 
 | Preciso mudar…                                          | Arquivo                                                    |
 | ---------------------------------------------------------- | -------------------------------------------------------------- |
-| Número de WhatsApp, Instagram, UTMs lidas (globais)         | `src/lib/config.ts`                                             |
-| Número de WhatsApp do funil `adic-25`                       | `src/lib/config-adic25.ts`                                      |
-| Perguntas, opções e lógica condicional (funil original)     | `src/lib/form.ts`                                                |
-| Perguntas, opções e lógica condicional (funil `adic-25`)     | `src/lib/form-adic25.ts`                                         |
-| Formato da mensagem enviada (funil original)                 | `src/lib/whatsapp.ts`                                            |
-| Formato da mensagem enviada (funil `adic-25`)                 | `src/lib/whatsapp-adic25.ts`                                      |
+| Instagram, site institucional (globais)                     | `src/lib/site/config.ts`                                        |
+| UTMs lidas / máscara e validação de telefone (globais)       | `src/lib/tracking/utm.ts`, `src/lib/tracking/phone.ts`            |
+| Número de WhatsApp, unidades A/B/C (funil original)          | `src/lib/aux-acidente/config.ts`                                 |
+| Número de WhatsApp do funil `adic-25`                       | `src/lib/adic25/config.ts`                                       |
+| Perguntas, opções e lógica condicional (funil original)     | `src/lib/aux-acidente/form.ts`                                    |
+| Perguntas, opções e lógica condicional (funil `adic-25`)     | `src/lib/adic25/form.ts`                                          |
+| Formato da mensagem enviada (funil original)                 | `src/lib/aux-acidente/whatsapp.ts`                                 |
+| Formato da mensagem enviada (funil `adic-25`)                 | `src/lib/adic25/whatsapp.ts`                                       |
+| Rodízio de unidades da rota raiz (funil original)             | `src/lib/aux-acidente/rotation.ts`                                 |
 | Textos de abertura/desqualificação/final (funil original)     | `src/components/Funnel.tsx`                                      |
 | Textos de abertura/desqualificação/final (funil `adic-25`)     | `src/components/FunnelAdic25.tsx`                                 |
 | Cores, fonte, animação de transição de tela                  | `src/app/globals.css` (tokens `@theme`)                          |
 | Título/descrição/indexação de uma rota específica            | `export const metadata` na `page.tsx` da rota                    |
-| Pixel do Meta (ID, eventos)                                  | `src/lib/pixel.ts`, `src/components/MetaPixel.tsx`                |
+| Pixel do Meta (ID, eventos)                                  | `src/lib/meta/pixel.ts`, `src/components/MetaPixel.tsx`            |
 
 `WHATSAPP_NUMBER` (padrão do funil original) está como `554268235732` —
 (42) 6823-5732, conta verificada no WhatsApp como "Bmz Advogados".
@@ -418,12 +468,15 @@ de anúncio, não deve competir com o site institucional na busca).
 
 ## Deploy
 
-```bash
-npx vercel --prod
-```
+Produção roda no Hostinger, como processo Node único (`npm run build` +
+`npm start`). O fluxo é via PR: `main` é a branch de desenvolvimento, `prod`
+é a branch de produção — abrir PR de `main` para `prod` e mergear libera o
+deploy.
 
-Ou conecte o repositório em vercel.com — o preset do Next.js é detectado
-sozinho, sem variáveis de ambiente para configurar.
+> Isso importa em especial pro rodízio de unidades da rota raiz (ver acima):
+> ele depende de um único processo Node compartilhando o contador em
+> memória. Não serve numa plataforma serverless (ex.: Vercel) sem adaptar
+> `src/lib/aux-acidente/rotation.ts` pra um store externo.
 
 Todas as rotas estão com `robots: noindex` por padrão (destino de anúncio,
 não deve competir com o site institucional na busca). Ajuste por rota via

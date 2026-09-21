@@ -1,5 +1,5 @@
 import Script from "next/script";
-import { META_PIXEL_ID } from "@/lib/pixel";
+import { META_PIXEL_ID } from "@/lib/meta/pixel";
 
 /**
  * Código base do Meta Pixel: carrega a lib e registra o PageView.

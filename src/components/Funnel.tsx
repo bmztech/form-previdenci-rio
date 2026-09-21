@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { INSTAGRAM_URL, SITE_URL, WHATSAPP_NUMBERS } from "@/lib/config";
 import {
   FIRST_STEP,
   questionOf,
@@ -10,16 +9,13 @@ import {
   stepById,
   type Answers,
   type Step,
-} from "@/lib/form";
-import { trackLead } from "@/lib/pixel";
-import { markSubmitted, useHasSubmitted } from "@/lib/submission-status";
-import {
-  buildWhatsAppUrl,
-  isValidPhone,
-  maskPhone,
-  readTracking,
-  type Tracking,
-} from "@/lib/whatsapp";
+} from "@/lib/aux-acidente/form";
+import { buildWhatsAppUrl } from "@/lib/aux-acidente/whatsapp";
+import { trackLead } from "@/lib/meta/pixel";
+import { INSTAGRAM_URL, SITE_URL } from "@/lib/site/config";
+import { markSubmitted, useHasSubmitted } from "@/lib/submission/status";
+import { isValidPhone, maskPhone } from "@/lib/tracking/phone";
+import { readTracking, type Tracking } from "@/lib/tracking/utm";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -39,22 +35,19 @@ function pathTotal(answers: Answers): number {
 
 type Screen = "intro" | "question" | "disqualified" | "done";
 
-/** Sorteia uma das três unidades quando nenhuma é fixada pela rota. */
-function randomWhatsAppNumber(): string {
-  const numbers = Object.values(WHATSAPP_NUMBERS);
-  return numbers[Math.floor(Math.random() * numbers.length)];
-}
-
 export default function Funnel({
   whatsappNumber,
+  unit,
 }: {
-  /** Se omitido (rota "/"), sorteia entre as unidades A/B/C. */
-  whatsappNumber?: string;
+  whatsappNumber: string;
+  /**
+   * Só a rota raiz "/" manda — é o rodízio A/B/C (ver src/lib/aux-acidente/rotation.ts).
+   * As rotas fixas (aux-a/b/c) já têm a unidade implícita no link usado,
+   * então não etiquetam a mensagem.
+   */
+  unit?: string;
 }) {
-  // Sorteado uma única vez, na montagem, e mantido até o fim do funil.
-  const [resolvedNumber] = useState(
-    () => whatsappNumber ?? randomWhatsAppNumber(),
-  );
+  const [resolvedNumber] = useState(whatsappNumber);
   const [screen, setScreen] = useState<Screen>("intro");
   const [currentId, setCurrentId] = useState<string>(FIRST_STEP);
   const [history, setHistory] = useState<string[]>([]);
@@ -96,11 +89,11 @@ export default function Funnel({
   const finish = useCallback(
     (finalAnswers: Answers) => {
       setWhatsAppUrl(
-        buildWhatsAppUrl(finalAnswers, tracking.current, resolvedNumber),
+        buildWhatsAppUrl(finalAnswers, tracking.current, resolvedNumber, unit),
       );
       setScreen("done");
     },
-    [resolvedNumber],
+    [resolvedNumber, unit],
   );
 
   const goTo = useCallback(
