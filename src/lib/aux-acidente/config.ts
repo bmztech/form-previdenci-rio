@@ -15,8 +15,9 @@ export const WHATSAPP_NUMBER = "554268235732";
 
 /**
  * Números por unidade, usados nas rotas /aux-a, /aux-b e /aux-c — cada uma
- * envia o lead para um número diferente. A rota raiz "/" também usa esse
- * mapa, mas por rodízio sequencial (ver `./rotation.ts`).
+ * envia o lead para um número diferente. O card "Auxílio-Acidente" do
+ * linktree ("/") também usa esse mapa: /go/aux-acidente faz o rodízio
+ * sequencial e redireciona pra uma dessas três rotas (ver `./rotation.ts`).
  */
 export const WHATSAPP_NUMBERS = {
   a: "554268235828", // BMZ A

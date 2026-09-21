@@ -17,11 +17,10 @@ export function buildHeadline(answers: Answers): string {
 /**
  * Monta o texto da mensagem que o lead envia para o escritório.
  *
- * `unit` só vem preenchido na rota raiz "/" (rodízio A/B/C sem link fixo) —
- * é o que permite o escritório saber de qual time é o lead, já que hoje os
- * três números de WHATSAPP_NUMBERS ainda são iguais. Nas rotas fixas
- * (aux-a/b/c) a unidade já está implícita no link usado, então `unit` fica
- * de fora e a mensagem sai como sempre saiu.
+ * `unit` etiqueta a mensagem com `[TIME X]` — hoje nenhuma rota passa esse
+ * parâmetro (nem /aux-a/b/c nem o destino do rodízio via /go/aux-acidente),
+ * porque a unidade já fica visível na própria URL clicada. Parâmetro fica
+ * disponível caso algum funil precise etiquetar a mensagem no futuro.
  */
 export function buildMessage(
   answers: Answers,

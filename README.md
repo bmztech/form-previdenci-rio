@@ -7,9 +7,10 @@ campanha já preenchidas na mensagem.
 Next.js 16 (App Router) + React 19 + Tailwind 4 + TypeScript. Quase toda
 página é estática/client-side — não há backend nem banco. Tudo o que existe
 é `sessionStorage`/`localStorage` no navegador do lead (UTMs da sessão e "já
-enviei esse formulário antes") e, na rota raiz "/", um contador em memória
-no servidor só para o rodízio A/B/C (`src/lib/aux-acidente/rotation.ts`) —
-ver "Rodízio de unidades na rota raiz" abaixo.
+enviei esse formulário antes") e, em `/go/aux-acidente`, um contador em
+memória no servidor só para o rodízio A/B/C
+(`src/lib/aux-acidente/rotation.ts`) — ver "Linktree e rodízio de unidades"
+abaixo.
 
 > **Antes de mexer no código**: este repo está em uma versão do Next.js mais
 > recente que a que você conhece. Convenções e APIs podem divergir do seu
@@ -50,9 +51,11 @@ mexer/quebrar um formulário sem risco de afetar outro.
 src/lib/
   aux-acidente/   form.ts, config.ts, whatsapp.ts, rotation.ts, *.test.ts
   adic25/         form.ts, config.ts, whatsapp.ts
+  linktree/       config.ts        (cards exibidos na rota raiz "/")
   meta/           pixel.ts
   site/           config.ts        (INSTAGRAM_URL, SITE_URL)
-  tracking/       utm.ts, phone.ts (UTMs/referrer, máscara/validação de telefone)
+  tracking/       utm.ts, phone.ts, links.ts (UTMs/referrer, máscara/validação
+                   de telefone, propagação de UTM entre páginas)
   submission/     status.ts        ("já enviei esse formulário antes")
 ```
 
@@ -60,29 +63,40 @@ src/lib/
 
 | Formulário           | Rota(s)                      | Steps                | Config                    | Mensagem WhatsApp        | Componente             |
 | --------------------- | ----------------------------- | --------------------- | -------------------------- | -------------------------- | ------------------------ |
-| Auxílio-acidente (original) | `/`, `/aux-a`, `/aux-b`, `/aux-c` | `src/lib/aux-acidente/form.ts` | `src/lib/aux-acidente/config.ts` | `src/lib/aux-acidente/whatsapp.ts` | `src/components/Funnel.tsx` |
+| Auxílio-acidente (original) | `/aux-a`, `/aux-b`, `/aux-c` | `src/lib/aux-acidente/form.ts` | `src/lib/aux-acidente/config.ts` | `src/lib/aux-acidente/whatsapp.ts` | `src/components/Funnel.tsx` |
 | Adicional de 25%      | `/adic-25`                    | `src/lib/adic25/form.ts` | `src/lib/adic25/config.ts` | `src/lib/adic25/whatsapp.ts` | `src/components/FunnelAdic25.tsx` |
 
-`/`, `/aux-a`, `/aux-b` e `/aux-c` são o **mesmo** funil (`Funnel.tsx` +
-`aux-acidente/form.ts`), só mudando o número de WhatsApp de destino:
+`/aux-a`, `/aux-b` e `/aux-c` são o **mesmo** funil (`Funnel.tsx` +
+`aux-acidente/form.ts`), só mudando o número de WhatsApp de destino. São
+rotas fixas: qualquer link pode apontar direto pra uma delas, ou o lead
+pode chegar por elas via o linktree + rodízio (ver abaixo).
 
-- `/` distribui **sequencialmente** entre as 3 unidades por ordem de
-  chegada — 1º lead → A, 2º → B, 3º → C, 4º → A... (`src/lib/aux-acidente/rotation.ts`,
-  ver "Rodízio de unidades na rota raiz" abaixo). Usado quando o anúncio não
-  aponta pra uma unidade fixa (ex.: link do Instagram).
-- `/aux-a`, `/aux-b`, `/aux-c` fixam a unidade via prop `whatsappNumber`
-  passada pela `page.tsx` da rota (ver `src/app/aux-a/page.tsx`).
+### Linktree e rodízio de unidades
 
-### Rodízio de unidades na rota raiz
+A rota raiz `/` é um **linktree**: mostra um card por oferta
+(`src/lib/linktree/config.ts` + `src/components/Linktree.tsx`) e repassa,
+intactas, as UTMs de entrada (`utm_source`, `utm_medium`, `utm_campaign`,
+`utm_content`, `utm_term`, `fbclid`, `gclid` — `TRACKING_PARAMS` em
+`src/lib/tracking/utm.ts`) para o destino de cada card, via
+`buildTrackedHref` (`src/lib/tracking/links.ts`). Assim, uma única UTM de
+campanha (ex.: `/?utm_source=instagram&utm_medium=cpc&utm_campaign=inss_acidente`)
+acompanha o lead até o funil escolhido, e — no caso do card
+"Previdenciário" — até o site externo.
 
-A rota `/` é `force-dynamic`: cada acesso roda no servidor e pega a próxima
-unidade de uma fila (`nextUnit()` em `src/lib/aux-acidente/rotation.ts`), num
-contador em memória que persiste enquanto o processo Node estiver de pé. Como
-a mensagem final não diferencia o número por si só (as três unidades ainda
-compartilham número — ver abaixo), a mensagem do WhatsApp vem etiquetada com
-a unidade sorteada: `[TIME A]` no topo e `unidade: A` no bloco "— origem —"
-(`buildMessage` em `src/lib/aux-acidente/whatsapp.ts`). As rotas fixas
-`/aux-a|b|c` **não** etiquetam — a unidade já está implícita no link usado.
+O card "Auxílio-Acidente" aponta para `/go/aux-acidente`, um route handler
+(`src/app/go/aux-acidente/route.ts`) que:
+
+1. Chama `nextUnit()` (`src/lib/aux-acidente/rotation.ts`) — fila sequencial
+   A/B/C, num contador em memória que persiste enquanto o processo Node
+   estiver de pé.
+2. Redireciona (307, `Cache-Control: no-store`) pra rota fixa
+   correspondente (`/aux-a`, `/aux-b` ou `/aux-c`), com as mesmas UTMs
+   anexadas — ex.: `/aux-b?utm_source=instagram&utm_medium=cpc&utm_campaign=inss_acidente`.
+
+Isso faz o rodízio consumir **uma posição por clique real**, não por
+pageview — prefetch, bot, reload da rota raiz ou reabertura do link do
+anúncio não avançam mais a fila (o handler só responde a `GET`; `HEAD`
+devolve 204 sem tocar no contador).
 
 Efeitos colaterais aceitos: o contador reinicia a cada deploy/restart do
 processo (volta pro A); e ele só funciona corretamente com **um único
@@ -91,7 +105,7 @@ processo Node** servindo a rota — se um dia isso virar múltiplas instâncias
 (Redis/Upstash), porque cada instância teria seu próprio contador. Por
 depender de estado do processo, `rotation.ts` mora dentro de
 `aux-acidente/` — não é um utilitário genérico, é específico desse funil
-(só a rota raiz o usa).
+(só `/go/aux-acidente` o usa).
 
 `/adic-25` é um formulário **completamente diferente** (outra pergunta,
 outra qualificação, outro número de WhatsApp fixo), que só reaproveita peças
@@ -341,8 +355,8 @@ de novo em outro anúncio do mesmo grupo.
 export type FormGroup = "aux-acidente" | "adic25";
 ```
 
-- `/`, `/aux-a`, `/aux-b`, `/aux-c` compartilham o grupo `"aux-acidente"` —
-  enviar por qualquer uma dessas rotas marca as outras três como "já
+- `/aux-a`, `/aux-b`, `/aux-c` compartilham o grupo `"aux-acidente"` —
+  enviar por qualquer uma dessas rotas marca as outras duas como "já
   enviado" também (é por isso que existe um `FORM_GROUP` no componente, não
   por rota).
 - `/adic-25` usa o grupo `"adic25"`, independente do anterior — enviar um não
@@ -428,13 +442,14 @@ crescer muito e as coincidências entre eles pararem de ser coincidência.
 
 ## Rotas (`src/app`)
 
-| Rota         | Componente                              | Observação                                                             |
-| ------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
-| `/`           | `Funnel whatsappNumber={...} unit={...}`   | `page.tsx` roda no servidor (`force-dynamic`) e chama `nextUnit()` — rodízio sequencial A/B/C, mensagem etiquetada. Ver "Rodízio de unidades na rota raiz". |
-| `/aux-a`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.a}` | Fixo na unidade A, sem etiqueta.                                            |
-| `/aux-b`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.b}` | Fixo na unidade B, sem etiqueta.                                            |
-| `/aux-c`      | `Funnel whatsappNumber={WHATSAPP_NUMBERS.c}` | Fixo na unidade C, sem etiqueta.                                            |
-| `/adic-25`    | `FunnelAdic25`                              | Metadata própria (`export const metadata` na `page.tsx`), `robots: noindex`. |
+| Rota                | Componente                              | Observação                                                             |
+| -------------------- | ------------------------------------------ | -------------------------------------------------------------------------- |
+| `/`                 | `Linktree links={...}`                    | Linktree — um card por oferta. Server component; lê `searchParams` e repassa as UTMs a cada card via `buildTrackedHref`. Metadata própria (`export const metadata` na `page.tsx`). |
+| `/go/aux-acidente`  | *(sem UI — route handler)*                | `GET` roda `nextUnit()` (rodízio sequencial A/B/C) e redireciona (307, `no-store`) pra `/aux-a`, `/aux-b` ou `/aux-c` com as UTMs anexadas. `HEAD` não avança a fila. Ver "Linktree e rodízio de unidades". |
+| `/aux-a`            | `Funnel whatsappNumber={WHATSAPP_NUMBERS.a}` | Fixo na unidade A, sem etiqueta.                                            |
+| `/aux-b`            | `Funnel whatsappNumber={WHATSAPP_NUMBERS.b}` | Fixo na unidade B, sem etiqueta.                                            |
+| `/aux-c`            | `Funnel whatsappNumber={WHATSAPP_NUMBERS.c}` | Fixo na unidade C, sem etiqueta.                                            |
+| `/adic-25`          | `FunnelAdic25`                              | Metadata própria (`export const metadata` na `page.tsx`), `robots: noindex`. |
 
 `layout.tsx` (raiz) define o `<html>/<body>`, monta `MetaPixel` (todas as
 rotas) e define metadata **padrão** (`robots: noindex` — a página é destino
@@ -454,7 +469,9 @@ de anúncio, não deve competir com o site institucional na busca).
 | Perguntas, opções e lógica condicional (funil `adic-25`)     | `src/lib/adic25/form.ts`                                          |
 | Formato da mensagem enviada (funil original)                 | `src/lib/aux-acidente/whatsapp.ts`                                 |
 | Formato da mensagem enviada (funil `adic-25`)                 | `src/lib/adic25/whatsapp.ts`                                       |
-| Rodízio de unidades da rota raiz (funil original)             | `src/lib/aux-acidente/rotation.ts`                                 |
+| Rodízio de unidades (rota `/go/aux-acidente`)                 | `src/lib/aux-acidente/rotation.ts`                                 |
+| Cards do linktree (rota raiz "/")                             | `src/lib/linktree/config.ts`                                      |
+| Quais parâmetros de UTM são propagados entre páginas          | `src/lib/tracking/utm.ts` (`TRACKING_PARAMS`)                     |
 | Textos de abertura/desqualificação/final (funil original)     | `src/components/Funnel.tsx`                                      |
 | Textos de abertura/desqualificação/final (funil `adic-25`)     | `src/components/FunnelAdic25.tsx`                                 |
 | Cores, fonte, animação de transição de tela                  | `src/app/globals.css` (tokens `@theme`)                          |

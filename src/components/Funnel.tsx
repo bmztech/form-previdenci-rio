@@ -41,9 +41,10 @@ export default function Funnel({
 }: {
   whatsappNumber: string;
   /**
-   * Só a rota raiz "/" manda — é o rodízio A/B/C (ver src/lib/aux-acidente/rotation.ts).
-   * As rotas fixas (aux-a/b/c) já têm a unidade implícita no link usado,
-   * então não etiquetam a mensagem.
+   * Etiqueta a mensagem com `[TIME X]`. Hoje nenhuma rota passa esse prop —
+   * nem as fixas (aux-a/b/c) nem o destino do rodízio via /go/aux-acidente
+   * (ver src/lib/aux-acidente/rotation.ts), porque a unidade já fica
+   * visível na própria URL clicada. Mantido opcional pra uso futuro.
    */
   unit?: string;
 }) {

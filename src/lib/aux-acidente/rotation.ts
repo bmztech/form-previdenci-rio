@@ -1,7 +1,8 @@
 /**
- * Rodízio sequencial das unidades A/B/C, usado só pela rota raiz "/" (o
- * link de anúncio, sem unidade fixa). Ordem de chegada: 1º lead -> A,
- * 2º -> B, 3º -> C, 4º -> A...
+ * Rodízio sequencial das unidades A/B/C, usado pelo route handler
+ * `/go/aux-acidente` (destino do card "Auxílio-Acidente" no linktree da
+ * rota raiz "/"). Uma posição da fila é consumida por clique, não por
+ * pageview. Ordem de chegada: 1º lead -> A, 2º -> B, 3º -> C, 4º -> A...
  *
  * O contador vive em memória no processo Node — funciona porque a produção
  * roda um único processo (Hostinger, `next start`). Se um dia isso virar

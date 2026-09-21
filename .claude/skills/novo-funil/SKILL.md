@@ -134,7 +134,17 @@ nessa página — ela tem prioridade sobre `layout.tsx` raiz (ver
 `src/app/adic-25/page.tsx`). Padrão do repo é `robots: { index: false, follow: false }`
 em toda rota de formulário (destino de anúncio).
 
-## 8. Verificar
+## 8. Registrar o card no linktree (se aplicável)
+
+Se o funil novo deve aparecer como opção na rota raiz `/`, adicione um item
+em `LINKTREE_LINKS` (`src/lib/linktree/config.ts`): `id`, `href: "/<slug>"`,
+`label` e `description`. As UTMs de entrada são propagadas automaticamente
+pra ele — não precisa de nada extra em `page.tsx`. Só use um destino `/go/*`
+(route handler) em vez do caminho direto se o funil também precisar de
+rodízio sequencial entre unidades (ver `src/app/go/aux-acidente/route.ts`
+como referência).
+
+## 9. Verificar
 
 - `npm run lint` e `npx tsc --noEmit` (ou `npm run build`) para pegar erros
   de tipo/import.
