@@ -27,7 +27,8 @@ import {
   type Answers,
   type Step,
 } from "@/lib/adic25/form";
-import { buildWhatsAppUrl } from "@/lib/adic25/whatsapp";
+import { buildMessage, buildWhatsAppUrl } from "@/lib/adic25/whatsapp";
+import { phoneDigits, sendLeadWebhook } from "@/lib/lead-webhook";
 import { trackLead } from "@/lib/meta/pixel";
 import { INSTAGRAM_URL, SITE_URL } from "@/lib/site/config";
 import { markSubmitted, useHasSubmitted } from "@/lib/submission/status";
@@ -60,6 +61,8 @@ export default function FunnelAdic25({
 
   const tracking = useRef<Tracking>({});
   const inputRef = useRef<HTMLInputElement>(null);
+  // Evita reenvio pro BI se o lead voltar da aba do WhatsApp e clicar de novo.
+  const leadReported = useRef(false);
 
   useEffect(() => {
     tracking.current = readTracking();
@@ -130,6 +133,24 @@ export default function FunnelAdic25({
     [answers, goTo, step],
   );
 
+  // Chamado no clique de "Falar com um advogado agora" — manda o lead pro
+  // webhook do BI junto com o trackLead/markSubmitted (ver Done).
+  const reportLead = useCallback(() => {
+    if (leadReported.current) return;
+    leadReported.current = true;
+    sendLeadWebhook({
+      form: FORM_GROUP,
+      pagina: window.location.href,
+      clicadoEm: new Date().toISOString(),
+      nome: answers.nome?.trim() || null,
+      telefone: phoneDigits(answers.telefone),
+      whatsappDestino: resolvedNumber,
+      mensagem: buildMessage(answers, tracking.current),
+      respostas: answers,
+      tracking: tracking.current,
+    });
+  }, [answers, resolvedNumber]);
+
   const submitInput = useCallback(() => {
     const value = draft.trim();
 
@@ -182,7 +203,8 @@ export default function FunnelAdic25({
     if (screen === "intro" && alreadySubmitted) return <AlreadySubmitted />;
     if (screen === "intro") return <Intro onStart={() => setScreen("question")} />;
     if (screen === "disqualified") return <Disqualified answers={answers} />;
-    if (screen === "done") return <Done url={whatsAppUrl} />;
+    if (screen === "done")
+      return <Done url={whatsAppUrl} onWhatsAppClick={reportLead} />;
 
     if (step.kind === "info") {
       return (
@@ -287,6 +309,7 @@ export default function FunnelAdic25({
     draft,
     error,
     goTo,
+    reportLead,
     screen,
     step,
     submitInput,
@@ -415,7 +438,13 @@ function Disqualified({ answers }: { answers: Answers }) {
   );
 }
 
-function Done({ url }: { url: string }) {
+function Done({
+  url,
+  onWhatsAppClick,
+}: {
+  url: string;
+  onWhatsAppClick: () => void;
+}) {
   return (
     <div className="animate-step-in text-center">
       <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-green/10 text-2xl">
@@ -441,6 +470,7 @@ function Done({ url }: { url: string }) {
         onClick={() => {
           trackLead();
           markSubmitted(FORM_GROUP);
+          onWhatsAppClick();
         }}
         className="mt-7 inline-flex w-full items-center justify-center rounded-xl bg-green px-8 py-4 text-lg font-bold text-white transition-colors hover:bg-green-dark focus:outline-none focus-visible:ring-3 focus-visible:ring-green/40 sm:w-auto"
       >
