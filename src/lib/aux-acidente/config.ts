@@ -11,7 +11,7 @@
  * Formato: código do país + DDD + número, apenas dígitos.
  * Ex.: (42) 6823-5732  ->  "554268235732"
  */
-export const WHATSAPP_NUMBER = "554268235732";
+export const WHATSAPP_NUMBER = "554268235828";
 
 /**
  * Números por unidade, usados nas rotas /aux-a, /aux-b e /aux-c — cada uma
