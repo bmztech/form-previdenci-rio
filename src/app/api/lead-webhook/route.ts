@@ -3,11 +3,15 @@
  * posta aqui). Existe pra requisição sair servidor→servidor: sem CORS no
  * navegador e sem expor o token de autenticação no código do cliente.
  *
- * Configuração 100% por variável de ambiente (sem defaults no código, pro
- * token não ficar no repositório):
- *   LEAD_WEBHOOK_URL   — URL do webhook do BI, sem query string
- *   LEAD_WEBHOOK_TOKEN — token; vai no header X-Webhook-Token e em `?token=`
+ * HOTFIX: URL e token hardcoded (sem ler .env) porque as variáveis de
+ * ambiente não estão sendo lidas no deploy da Hostinger. Quando o .env de
+ * produção funcionar, voltar pra process.env.LEAD_WEBHOOK_URL (sem query
+ * string) e process.env.LEAD_WEBHOOK_TOKEN.
  */
+
+const WEBHOOK_URL = "https://api-bi.bmztech.com.br/api/webhooks/leads/form";
+const WEBHOOK_TOKEN =
+  "yHvuUetxW6pOalE3Py67GnnL2gHduyDpPTiVVjG2TxrKisj8ts3xA5lgIyTLmXST";
 
 export async function POST(request: Request): Promise<Response> {
   let payload: unknown;
@@ -17,18 +21,8 @@ export async function POST(request: Request): Promise<Response> {
     return new Response(null, { status: 400 });
   }
 
-  const base = process.env.LEAD_WEBHOOK_URL;
-  const token = process.env.LEAD_WEBHOOK_TOKEN;
-  if (!base || !token) {
-    console.error(
-      "[lead-webhook] LEAD_WEBHOOK_URL/LEAD_WEBHOOK_TOKEN não configurados — lead descartado.",
-    );
-    return new Response(null, { status: 204 });
-  }
-
-  // `set` tolera uma URL que já venha com `?token=` (sobrescreve sem duplicar).
-  const url = new URL(base);
-  url.searchParams.set("token", token);
+  const url = new URL(WEBHOOK_URL);
+  url.searchParams.set("token", WEBHOOK_TOKEN);
 
   try {
     const response = await fetch(url, {
@@ -37,7 +31,7 @@ export async function POST(request: Request): Promise<Response> {
         "Content-Type": "application/json",
         // A API do BI autentica pelo header X-Webhook-Token, com fallback
         // pro `?token=` da query string — enviamos os dois por redundância.
-        "X-Webhook-Token": token,
+        "X-Webhook-Token": WEBHOOK_TOKEN,
       },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(8_000),
