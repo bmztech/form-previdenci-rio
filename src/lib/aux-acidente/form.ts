@@ -148,8 +148,9 @@ export const STEPS: Step[] = [
       { value: "visao", label: "Visão", phrase: "da visão" },
       { value: "cabeca", label: "Cabeça", phrase: "da cabeça" },
       { value: "costas", label: "Costas", phrase: "das costas" },
-      // "Outras regiões" não nomeia nada, então a frase vira só "afetada".
-      { value: "outra", label: "Outras regiões", phrase: "afetada" },
+      // Label "Outra região" é usada pela automação do WhatsApp pra
+      // identificar esse caminho. Não renomear sem avisar quem mantém o fluxo.
+      { value: "outra", label: "Outra região", phrase: "afetada" },
     ],
     // Cabeça e costas não se enquadram na triagem do escritório.
     next: (v) => (REGIOES_DESQUALIFICANTES.has(v) ? "disqualified" : "lesao"),
